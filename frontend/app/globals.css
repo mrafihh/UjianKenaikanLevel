@@ -1,0 +1,41 @@
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    /* Hapus highlight biru saat tap di mobile */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    /* Cegah pull-to-refresh browser saat scroll */
+    overscroll-behavior-y: none;
+  }
+
+  /* Hilangkan spinner di input number */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Padding bawah untuk iPhone home indicator */
+  .pb-safe {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
