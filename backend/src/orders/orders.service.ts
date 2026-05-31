@@ -4,7 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 const TAX_RATE = 0.1;
@@ -41,10 +41,11 @@ export class OrdersService {
     const tax = Math.round(subtotal * TAX_RATE);
     const total = subtotal + tax;
 
-    // 3. Simpan order + items dalam satu transaction
+// 3. Simpan order + items dalam satu transaction
     const order = await this.prisma.$transaction(async (tx) => {
       return tx.order.create({
         data: {
+          customerName: dto.customerName, // 👈 TAMBAHKAN BARIS INI
           tableNumber: dto.tableNumber,
           paymentMethod: dto.paymentMethod,
           notes: dto.notes,

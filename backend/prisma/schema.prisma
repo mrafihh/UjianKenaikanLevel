@@ -1,48 +1,15 @@
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// prisma/schema.prisma
-model MenuItem {
-  id          Int         @id @default(autoincrement())
-  name        String
-  description String?
-  price       Int         // stored in Rupiah (integer, no decimal)
-  category    String
-  imageUrl    String?
-  emoji       String?
-  isAvailable Boolean     @default(true)
-  orderItems  OrderItem[]
-  createdAt   DateTime    @default(now())
-}
-
-model Order {
-  id            Int         @id @default(autoincrement())
-  tableNumber   String
-  status        OrderStatus @default(PENDING)
-  paymentMethod PaymentMethod
-  notes         String?
-  subtotal      Int
-  tax           Int
-  total         Int
-  items         OrderItem[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-}
-
-model OrderItem {
-  id         Int      @id @default(autoincrement())
-  orderId    Int
-  menuItemId Int
-  quantity   Int
-  unitPrice  Int      // snapshot harga saat order
-  order      Order    @relation(fields: [orderId], references: [id])
-  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+enum Role {
+  ADMIN
+  KASIR
 }
 
 enum OrderStatus {
@@ -57,4 +24,59 @@ enum OrderStatus {
 enum PaymentMethod {
   CASH
   QRIS
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String   
+  role      Role
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MenuItem {
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String?
+  price       Int        
+  category    String
+  imageUrl    String?
+  emoji       String?
+  isAvailable Boolean     @default(true)
+  
+  orderItems  OrderItem[]
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Order {
+  id            Int           @id @default(autoincrement())
+  customerName  String        
+  tableNumber   String
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod
+  notes         String?
+  
+  subtotal      Int
+  tax           Int
+  total         Int
+  
+  items         OrderItem[]
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model OrderItem {
+  id         Int      @id @default(autoincrement())
+  orderId    Int
+  menuItemId Int
+  quantity   Int
+  unitPrice  Int     
+  
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 }
