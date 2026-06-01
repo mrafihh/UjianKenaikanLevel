@@ -1,27 +1,35 @@
-// app/layout.tsx
-import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import type { Metadata } from 'next';
+import { Playfair_Display, DM_Sans } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+});
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+  weight: ['300', '400', '500', '600', '700'],
+});
 
 export const metadata: Metadata = {
-  title: 'Warung Nikmat — Order Online',
-  description: 'Pesan makanan & minuman langsung dari meja Anda',
+  title: 'Warung Saffron — Self Ordering',
+  description: 'Pesan makanan langsung dari meja Anda. Cepat, mudah, dan tanpa antri.',
+  robots: 'noindex, nofollow',
 };
 
-// Viewport terpisah dari metadata (Next.js 14+)
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,       // disable zoom agar feel native app
-  themeColor: '#e8420a', // warna status bar di Android
-};
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="id">
-      <body className={`${inter.className} bg-orange-50 antialiased`}>
+    <html lang="id" className={`${playfair.variable} ${dmSans.variable}`}>
+      <body className="bg-cream font-sans antialiased">
         {children}
       </body>
     </html>
