@@ -16,17 +16,29 @@ async function bootstrap() {
     }),
   );
 
-  // CORS untuk Next.js frontend
+  // CORS untuk Next.js frontend dan Swagger
   app.enableCors({
     origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PATCH'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT', 'OPTIONS'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   const config = new DocumentBuilder()
     .setTitle('Restoran Kasir API - Official')
     .setDescription('Dokumentasi API Resmi untuk Sistem Manajemen Restoran')
     .setVersion('1.0')
-    .addBearerAuth() // Mendukung pengujian token JWT di web
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -36,3 +48,4 @@ async function bootstrap() {
   console.log(`Server running on http://localhost:${process.env.PORT ?? 3001}`);
 }
 bootstrap();
+

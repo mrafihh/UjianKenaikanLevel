@@ -12,10 +12,11 @@ import {
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto'; // 👈 IMPORT DTO BARU
+import { UpdateOrderDto } from './dto/update-order.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('orders')
 export class OrdersController {
@@ -25,6 +26,11 @@ export class OrdersController {
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN', 'KASIR')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Create new order (ADMIN/KASIR only)' })
+  @ApiResponse({ status: 201, description: 'Order created successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin or Kasir role required' })
   create(@Body() dto: CreateOrderDto) {
     return this.ordersService.create(dto);
   }
@@ -33,6 +39,11 @@ export class OrdersController {
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN', 'KASIR')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get all orders (ADMIN/KASIR only)' })
+  @ApiResponse({ status: 200, description: 'List of orders' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin or Kasir role required' })
   findAll(@Query('status') status?: string) {
     return this.ordersService.findAll(status);
   }
@@ -41,6 +52,11 @@ export class OrdersController {
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN', 'KASIR')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get order by ID (ADMIN/KASIR only)' })
+  @ApiResponse({ status: 200, description: 'Order details' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin or Kasir role required' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.findOne(id);
   }
@@ -49,6 +65,11 @@ export class OrdersController {
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN', 'KASIR')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update order (ADMIN/KASIR only)' })
+  @ApiResponse({ status: 200, description: 'Order updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin or Kasir role required' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateOrderDto,
@@ -65,6 +86,11 @@ export class OrdersController {
   @Patch(':id/status')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN', 'KASIR')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update order status (ADMIN/KASIR only)' })
+  @ApiResponse({ status: 200, description: 'Order status updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin or Kasir role required' })
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status') status: string,

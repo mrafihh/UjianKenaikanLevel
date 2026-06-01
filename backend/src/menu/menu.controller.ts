@@ -6,6 +6,7 @@ import { UpdateMenuDto } from './dto/update-menu.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('menu')
 export class MenuController {
@@ -14,6 +15,11 @@ export class MenuController {
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Create new menu item (ADMIN only)' })
+  @ApiResponse({ status: 201, description: 'Menu created successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   async create(@Body() createMenuDto: CreateMenuDto) {
     const data = await this.menuService.create(createMenuDto);
     // 👇 Response sukses yang rapi
@@ -25,6 +31,8 @@ export class MenuController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all menu items' })
+  @ApiResponse({ status: 200, description: 'List of menu items' })
   findAll(
     @Query('availableOnly', new DefaultValuePipe(true), ParseBoolPipe) availableOnly: boolean
   ) {
@@ -32,6 +40,9 @@ export class MenuController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get menu item by ID' })
+  @ApiResponse({ status: 200, description: 'Menu item details' })
+  @ApiResponse({ status: 404, description: 'Menu not found' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.menuService.findOne(id);
   }
@@ -39,6 +50,11 @@ export class MenuController {
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update menu item (ADMIN only)' })
+  @ApiResponse({ status: 200, description: 'Menu updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateMenuDto: UpdateMenuDto
@@ -55,6 +71,11 @@ export class MenuController {
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Delete menu item (ADMIN only)' })
+  @ApiResponse({ status: 200, description: 'Menu deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     const data = await this.menuService.remove(id);
     // 👇 Response sukses yang rapi
@@ -65,3 +86,4 @@ export class MenuController {
     };
   }
 }
+
