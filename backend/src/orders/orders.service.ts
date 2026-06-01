@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderDto } from './dto/update-order.dto'; // 👈 IMPORT DTO BARU
 
 const TAX_RATE = 0.1;
 
@@ -16,23 +17,26 @@ export class OrdersService {
   async create(dto: CreateOrderDto) {
     const menuIds = dto.items.map((i) => i.menuItemId);
 
-    // 1. Validasi semua menu item exist dan available
     const menuItems = await this.prisma.menuItem.findMany({
-      where: { id: { in: menuIds }, isAvailable: true },
+      where: { id: { in: menuIds } },
     });
 
     if (menuItems.length !== menuIds.length) {
-      throw new BadRequestException(
-        'Beberapa item tidak tersedia atau tidak ditemukan',
-      );
+      throw new BadRequestException('Beberapa item tidak ditemukan di dalam sistem');
     }
 
-    // 2. Hitung harga server-side — JANGAN pakai harga dari client
     const menuMap = new Map(menuItems.map((m) => [m.id, m]));
     let subtotal = 0;
 
     const itemsWithPrice = dto.items.map((item) => {
       const menu = menuMap.get(item.menuItemId)!;
+
+      if (menu.jumlahStock < item.quantity) {
+        throw new BadRequestException(
+          `Gagal memesan! Stok untuk menu "${menu.name}" hanya tersisa ${menu.jumlahStock} porsi.`,
+        );
+      }
+
       const unitPrice = menu.price;
       subtotal += unitPrice * item.quantity;
       return { menuItemId: item.menuItemId, quantity: item.quantity, unitPrice };
@@ -41,11 +45,10 @@ export class OrdersService {
     const tax = Math.round(subtotal * TAX_RATE);
     const total = subtotal + tax;
 
-// 3. Simpan order + items dalam satu transaction
-    const order = await this.prisma.$transaction(async (tx) => {
-      return tx.order.create({
+    return this.prisma.$transaction(async (tx) => {
+      const createdOrder = await tx.order.create({
         data: {
-          customerName: dto.customerName, // 👈 TAMBAHKAN BARIS INI
+          customerName: dto.customerName,
           tableNumber: dto.tableNumber,
           paymentMethod: dto.paymentMethod,
           notes: dto.notes,
@@ -60,49 +63,151 @@ export class OrdersService {
             })),
           },
         },
-        include: {
-          items: {
-            include: { menuItem: true },
-          },
-        },
+        include: { items: { include: { menuItem: true } } },
       });
-    });
 
-    return order;
+      for (const item of itemsWithPrice) {
+        await tx.menuItem.update({
+          where: { id: item.menuItemId },
+          data: { jumlahStock: { decrement: item.quantity } },
+        });
+      }
+      return createdOrder;
+    });
   }
 
-  // Ambil semua order — untuk admin dashboard
+  // 👇 FUNGSI BARU: Update Data Order + Hitung Ulang Stok
+  async update(id: number, dto: UpdateOrderDto) {
+    // 1. Ambil order lama untuk dicek statusnya
+    const existingOrder = await this.prisma.order.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+
+    if (!existingOrder) throw new NotFoundException(`Order #${id} tidak ditemukan`);
+
+    // 2. Cegah update jika pelanggan sudah membayar (Status: PAID)
+    // Sesuaikan string 'PAID' jika kamu menggunakan enum lain di Prisma
+    if (existingOrder.status === 'PAID') {
+      throw new BadRequestException(
+        'Pesanan tidak dapat diedit karena pelanggan sudah melakukan pembayaran.',
+      );
+    }
+
+    // 3. Eksekusi Perubahan dalam Transaksi
+    return this.prisma.$transaction(async (tx) => {
+      // Jika kasir juga mengubah DAFTAR PESANAN (items)
+      if (dto.items && dto.items.length > 0) {
+        
+        // A. KEMBALIKAN STOK LAMA (Refund stok ke database sementara)
+        for (const oldItem of existingOrder.items) {
+          await tx.menuItem.update({
+            where: { id: oldItem.menuItemId },
+            data: { jumlahStock: { increment: oldItem.quantity } },
+          });
+        }
+
+        // B. SIAPKAN ITEM BARU & HITUNG HARGA
+        const newMenuIds = dto.items.map((i) => i.menuItemId);
+        const newMenuItems = await tx.menuItem.findMany({
+          where: { id: { in: newMenuIds } },
+        });
+
+        const menuMap = new Map(newMenuItems.map((m) => [m.id, m]));
+        let subtotal = 0;
+
+        const itemsWithPrice = dto.items.map((item) => {
+          const menu = menuMap.get(item.menuItemId);
+          if (!menu) throw new NotFoundException(`Menu ID #${item.menuItemId} tidak ditemukan`);
+
+          // Validasi stok ulang (setelah stok lama dikembalikan tadi)
+          if (menu.jumlahStock < item.quantity) {
+            throw new BadRequestException(
+              `Gagal update! Stok "${menu.name}" tidak mencukupi. Sisa: ${menu.jumlahStock}`,
+            );
+          }
+
+          const unitPrice = menu.price;
+          subtotal += unitPrice * item.quantity;
+          return { menuItemId: item.menuItemId, quantity: item.quantity, unitPrice };
+        });
+
+        const tax = Math.round(subtotal * TAX_RATE);
+        const total = subtotal + tax;
+
+        // C. HAPUS RELASI ITEM LAMA DARI ORDER INI
+        await tx.orderItem.deleteMany({
+          where: { orderId: id },
+        });
+
+        // D. POTONG STOK UNTUK ITEM BARU
+        for (const newItem of itemsWithPrice) {
+          await tx.menuItem.update({
+            where: { id: newItem.menuItemId },
+            data: { jumlahStock: { decrement: newItem.quantity } },
+          });
+        }
+
+        // E. UPDATE ORDER DENGAN DATA TOTAL & ITEM TERBARU
+        return tx.order.update({
+          where: { id },
+          data: {
+            customerName: dto.customerName,
+            tableNumber: dto.tableNumber,
+            notes: dto.notes,
+            paymentMethod: dto.paymentMethod,
+            subtotal,
+            tax,
+            total,
+            items: {
+              create: itemsWithPrice.map((item) => ({
+                menuItemId: item.menuItemId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+              })),
+            },
+          },
+          include: { items: { include: { menuItem: true } } },
+        });
+      }
+
+      // Jika KASIR HANYA MENGUBAH DATA TEKS (Nama/Meja) TANPA MENGUBAH PESANAN
+      return tx.order.update({
+        where: { id },
+        data: {
+          customerName: dto.customerName,
+          tableNumber: dto.tableNumber,
+          notes: dto.notes,
+          paymentMethod: dto.paymentMethod,
+        },
+        include: { items: { include: { menuItem: true } } },
+      });
+    });
+  }
+
   async findAll(status?: string) {
     return this.prisma.order.findMany({
       where: status ? { status: status as any } : undefined,
-      include: {
-        items: { include: { menuItem: true } },
-      },
+      include: { items: { include: { menuItem: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  // Ambil satu order by ID
   async findOne(id: number) {
     const order = await this.prisma.order.findUnique({
       where: { id },
-      include: {
-        items: { include: { menuItem: true } },
-      },
+      include: { items: { include: { menuItem: true } } },
     });
     if (!order) throw new NotFoundException(`Order #${id} tidak ditemukan`);
     return order;
   }
 
-  // Update status order — dipanggil admin/kasir
   async updateStatus(id: number, status: string) {
-    await this.findOne(id); // validasi exist dulu
+    await this.findOne(id); 
     return this.prisma.order.update({
       where: { id },
       data: { status: status as any },
-      include: {
-        items: { include: { menuItem: true } },
-      },
+      include: { items: { include: { menuItem: true } } },
     });
   }
 }

@@ -14,7 +14,7 @@ enum Role {
 
 enum OrderStatus {
   PENDING
-  CONFIRMED
+  PAID
   PREPARING
   READY
   COMPLETED
@@ -44,7 +44,7 @@ model MenuItem {
   category    String
   imageUrl    String?
   emoji       String?
-  isAvailable Boolean     @default(true)
+  jumlahStock Int         @default(0)
   
   orderItems  OrderItem[]
   

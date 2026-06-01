@@ -4,7 +4,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
 
-
 @Injectable()
 export class MenuService {
   constructor(private prisma: PrismaService) {}
@@ -16,9 +15,10 @@ export class MenuService {
     });
   }
 
-  // READ ALL: Ambil semua menu (isAvailableOnly = true untuk pelanggan, false untuk admin)
-  async findAll(isAvailableOnly: boolean = true) {
-    const whereCondition = isAvailableOnly ? { isAvailable: true } : {};
+  // READ ALL: Ambil semua menu (inStockOnly = true untuk pelanggan, false untuk admin)
+  async findAll(inStockOnly: boolean = true) {
+    // 👇 LOGIKA BARU: Jika untuk pelanggan, hanya tampilkan yang stoknya lebih besar dari 0 (gt: 0)
+    const whereCondition = inStockOnly ? { jumlahStock: { gt: 0 } } : {};
     
     return this.prisma.menuItem.findMany({
       where: whereCondition,
@@ -45,19 +45,19 @@ export class MenuService {
   }
 
   // DELETE: Hapus menu (Admin)
-async remove(id: number) {
-  // 1. Cek dulu apakah menunya memang ada
-  const menu = await this.prisma.menuItem.findUnique({ where: { id } });
-  if (!menu) throw new NotFoundException(`Menu dengan ID #${id} tidak ditemukan`);
+  async remove(id: number) {
+    // 1. Cek dulu apakah menunya memang ada
+    const menu = await this.prisma.menuItem.findUnique({ where: { id } });
+    if (!menu) throw new NotFoundException(`Menu dengan ID #${id} tidak ditemukan`);
 
-  try {
-    // 2. Coba hapus
-    return await this.prisma.menuItem.delete({ where: { id } });
-  } catch (error) {
-    // 3. Jika gagal karena ditolak database (ada relasi), berikan pesan resmi
-    throw new BadRequestException(
-      'Menu tidak bisa dihapus karena sudah memiliki riwayat transaksi. Silakan ubah status "isAvailable" menjadi false saja.',
-    );
+    try {
+      // 2. Coba hapus
+      return await this.prisma.menuItem.delete({ where: { id } });
+    } catch (error) {
+      // 👇 LOGIKA BARU: Pesan error diubah agar relevan dengan fitur stok
+      throw new BadRequestException(
+        'Menu tidak bisa dihapus karena sudah memiliki riwayat transaksi. Silakan ubah stok menjadi 0 saja.',
+      );
+    }
   }
-}
 }

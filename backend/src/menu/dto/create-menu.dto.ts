@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Min, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateMenuDto {
   @IsString()
@@ -21,7 +21,7 @@ export class CreateMenuDto {
   @IsString()
   imageUrl?: string;
 
-  @IsOptional()
-  @IsBoolean()
-  isAvailable?: boolean;
+  @IsNumber()
+  @Min(0, { message: 'Jumlah stock tidak boleh negatif' })
+  jumlahStock!: number;
 }

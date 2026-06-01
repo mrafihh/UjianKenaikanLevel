@@ -12,10 +12,10 @@ import {
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderDto } from './dto/update-order.dto'; // 👈 IMPORT DTO BARU
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { Role } from '@prisma/client';
 
 @Controller('orders')
 export class OrdersController {
@@ -28,7 +28,6 @@ export class OrdersController {
   }
 
   // GET /orders — admin: lihat semua order
-  // GET /orders?status=PENDING — filter by status
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN', 'KASIR')
@@ -44,10 +43,26 @@ export class OrdersController {
     return this.ordersService.findOne(id);
   }
 
-  // PATCH /orders/:id/status — admin update status (CONFIRMED, PREPARING, dll)
-@Patch(':id/status')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('ADMIN', 'KASIR')
+  // PATCH /orders/:id — ADMIN/KASIR: Edit pesanan (Ubah menu, tambah item, dll)
+  @Patch(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN', 'KASIR')
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateOrderDto,
+  ) {
+    const data = await this.ordersService.update(id, dto);
+    return {
+      success: true,
+      message: `Data pesanan #${id} berhasil diperbarui`,
+      data: data,
+    };
+  }
+
+  // PATCH /orders/:id/status — admin update status (PAID, CANCELLED, dll)
+  @Patch(':id/status')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN', 'KASIR')
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status') status: string,
@@ -56,7 +71,7 @@ export class OrdersController {
     return {
       success: true,
       message: `Status pesanan #${id} berhasil diubah menjadi ${status}`,
-      data: data
+      data: data,
     };
   }
 }
