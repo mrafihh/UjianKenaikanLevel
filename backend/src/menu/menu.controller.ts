@@ -6,12 +6,15 @@ import { UpdateMenuDto } from './dto/update-menu.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Menu')
 @Controller('menu')
 export class MenuController {
   constructor(private readonly menuService: MenuService) {}
 
   @Post()
+  @ApiBearerAuth() // 👈 TAMBAHKAN HANYA DI SINI
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   async create(@Body() createMenuDto: CreateMenuDto) {
@@ -37,6 +40,7 @@ export class MenuController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth() // 👈 TAMBAHKAN HANYA DI SINI
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   async update(
@@ -53,6 +57,7 @@ export class MenuController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth() // 👈 TAMBAHKAN HANYA DI SINI
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   async remove(@Param('id', ParseIntPipe) id: number) {

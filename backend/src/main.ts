@@ -17,9 +17,12 @@ async function bootstrap() {
   );
 
   // CORS untuk Next.js frontend
+  // src/main.ts (Bagian CORS)
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PATCH'],
+    origin: '*', // Izinkan dari semua URL (Bisa disesuaikan nanti jika sudah production)
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Pastikan DELETE dan OPTIONS ada
+    allowedHeaders: 'Content-Type, Accept, Authorization', // Pastikan Authorization diizinkan
+    credentials: true,
   });
 
   const config = new DocumentBuilder()

@@ -16,7 +16,9 @@ import { UpdateOrderDto } from './dto/update-order.dto'; // 👈 IMPORT DTO BARU
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Orders')
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
@@ -29,6 +31,7 @@ export class OrdersController {
 
   // GET /orders — admin: lihat semua order
   @Get()
+  @ApiBearerAuth() // 👈 TAMBAHKAN HANYA DI SINI
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN', 'KASIR')
   findAll(@Query('status') status?: string) {
@@ -37,6 +40,7 @@ export class OrdersController {
 
   // GET /orders/:id — detail satu order
   @Get(':id')
+  @ApiBearerAuth() // 👈 TAMBAHKAN HANYA DI SINI
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN', 'KASIR')
   findOne(@Param('id', ParseIntPipe) id: number) {
@@ -45,6 +49,7 @@ export class OrdersController {
 
   // PATCH /orders/:id — ADMIN/KASIR: Edit pesanan (Ubah menu, tambah item, dll)
   @Patch(':id')
+  @ApiBearerAuth() // 👈 TAMBAHKAN HANYA DI SINI
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN', 'KASIR')
   async update(
@@ -61,6 +66,7 @@ export class OrdersController {
 
   // PATCH /orders/:id/status — admin update status (PAID, CANCELLED, dll)
   @Patch(':id/status')
+  @ApiBearerAuth() // 👈 TAMBAHKAN HANYA DI SINI
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN', 'KASIR')
   async updateStatus(
