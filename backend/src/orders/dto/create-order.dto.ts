@@ -1,4 +1,5 @@
 // src/orders/dto/create-order.dto.ts
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsNotEmpty,
@@ -12,35 +13,65 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
+// 1. Definisikan dekorator Swagger untuk item di dalam pesanan
 class OrderItemDto {
+  @ApiProperty({
+    description: 'ID dari menu yang dipesan',
+    example: 1,
+  })
   @IsNumber()
-  menuItemId!: number; // 👈 Tambahkan ! di sini
+  menuItemId!: number;
 
+  @ApiProperty({
+    description: 'Jumlah porsi/item yang dipesan',
+    example: 2,
+  })
   @IsNumber()
   @Min(1, { message: 'Quantity minimal 1' })
-  quantity!: number;   // 👈 Tambahkan ! di sini
+  quantity!: number;
 }
 
 export class CreateOrderDto {
+  @ApiProperty({
+    description: 'Nama pelanggan yang memesan',
+    example: 'Budi Santoso',
+  })
   @IsString()
   @IsNotEmpty({ message: 'Nama pelanggan wajib diisi' })
-  customerName!: string; // 👈 Tambahkan ! di sini
+  customerName!: string;
 
+  @ApiProperty({
+    description: 'Nomor atau kode meja pelanggan',
+    example: 'Meja 05',
+  })
   @IsString()
   @IsNotEmpty({ message: 'Nomor meja wajib diisi' })
-  tableNumber!: string;  // 👈 Tambahkan ! di sini
+  tableNumber!: string;
 
+  @ApiProperty({
+    description: 'Metode pembayaran yang dipilih',
+    example: 'QRIS',
+    enum: ['CASH', 'QRIS'], // Menampilkan pilihan dropdown di Swagger UI
+  })
   @IsEnum(['CASH', 'QRIS'], { message: 'Metode pembayaran harus CASH atau QRIS' })
-  paymentMethod!: 'CASH' | 'QRIS'; // 👈 Tambahkan ! di sini
+  paymentMethod!: 'CASH' | 'QRIS';
 
-  // Catatan: 'notes' tidak perlu tanda '!' karena dia sudah menggunakan '?' (opsional)
+  @ApiPropertyOptional({
+    description: 'Catatan tambahan untuk pesanan (misal: pedas, tanpa es)',
+    example: 'Nasi gorengnya minta pedas karet dua, es teh manisnya diganti hangat',
+  })
   @IsOptional()
   @IsString()
-  notes?: string; 
+  notes?: string;
 
+  // 2. Gunakan type dan isArray agar Swagger tahu ini adalah list dari OrderItemDto
+  @ApiProperty({
+    description: 'Daftar item menu yang dipesan',
+    type: [OrderItemDto], // Menghubungkan ke class OrderItemDto di atas
+  })
   @IsArray()
   @ArrayMinSize(1, { message: 'Pesanan tidak boleh kosong' })
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
-  items!: OrderItemDto[]; // 👈 Tambahkan ! di sini
+  items!: OrderItemDto[];
 }
