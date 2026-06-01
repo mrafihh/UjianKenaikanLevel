@@ -23,6 +23,8 @@ export class OrdersController {
 
   // POST /orders — dipanggil customer saat submit pesanan
   @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN', 'KASIR')
   create(@Body() dto: CreateOrderDto) {
     return this.ordersService.create(dto);
   }
@@ -75,3 +77,4 @@ export class OrdersController {
     };
   }
 }
+
