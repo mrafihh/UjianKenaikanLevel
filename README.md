@@ -1,4 +1,4 @@
-# 🍽️ Restoran Kasir Backend API
+# 🍽️ OrderEase
 
 Sistem manajemen restoran & kantin digital yang modern untuk **SMK Telkom Malang**. Backend API ini memudahkan pengelolaan menu, pesanan pelanggan, pembayaran digital, dan sistem kasir terintegrasi dengan teknologi terkini.
 
