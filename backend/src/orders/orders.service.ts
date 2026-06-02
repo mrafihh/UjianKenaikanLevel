@@ -5,14 +5,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { XenditService } from '../xendit/xendit.service'; // 👈 IMPORT XENDIT SERVICE
 import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto'; // 👈 IMPORT DTO BARU
+import { UpdateOrderDto } from './dto/update-order.dto';
 
 const TAX_RATE = 0.1;
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private xenditService: XenditService, // 👈 INJECT XENDIT SERVICE DI SINI
+  ) {}
 
   async create(dto: CreateOrderDto) {
     const menuIds = dto.items.map((i) => i.menuItemId);
@@ -45,8 +49,9 @@ export class OrdersService {
     const tax = Math.round(subtotal * TAX_RATE);
     const total = subtotal + tax;
 
-    return this.prisma.$transaction(async (tx) => {
-      const createdOrder = await tx.order.create({
+    // 1. JALANKAN TRANSAKSI PRISMA (Simpan ke DB dulu)
+    const createdOrder = await this.prisma.$transaction(async (tx) => {
+      const newOrder = await tx.order.create({
         data: {
           customerName: dto.customerName,
           tableNumber: dto.tableNumber,
@@ -72,8 +77,42 @@ export class OrdersService {
           data: { jumlahStock: { decrement: item.quantity } },
         });
       }
-      return createdOrder;
+      return newOrder;
     });
+
+    // 2. PROSES XENDIT (Jika pelanggan pilih ONLINE)
+    if (createdOrder.paymentMethod === 'ONLINE') {
+      try {
+        // Buat tagihan ke Xendit menggunakan ID asli dari DB
+        const invoice = await this.xenditService.createInvoice({
+          orderId: createdOrder.id,
+          amount: createdOrder.total,
+          customerName: createdOrder.customerName,
+        });
+
+        // Update database untuk memasukkan URL Xendit
+        const updatedOrder = await this.prisma.order.update({
+          where: { id: createdOrder.id },
+          data: {
+            paymentUrl: invoice.invoice_url,
+          },
+          include: { items: { include: { menuItem: true } } },
+        });
+
+        return {
+          message: 'Pesanan berhasil dibuat, silakan lakukan pembayaran',
+          data: updatedOrder,
+        };
+      } catch (error) {
+        throw new BadRequestException('Pesanan tersimpan di sistem, tetapi gagal membuat link pembayaran Xendit.');
+      }
+    }
+
+    // 3. JIKA PEMBAYARAN CASH
+    return {
+      message: 'Pesanan tunai berhasil dibuat',
+      data: createdOrder,
+    };
   }
 
   // 👇 FUNGSI BARU: Update Data Order + Hitung Ulang Stok

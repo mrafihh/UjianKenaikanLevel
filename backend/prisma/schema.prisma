@@ -28,7 +28,7 @@ enum OrderStatus {
 
 enum PaymentMethod {
   CASH
-  QRIS
+  ONLINE
 }
 
 model User {
@@ -66,6 +66,8 @@ model Order {
   status        OrderStatus   @default(PENDING)
   paymentMethod PaymentMethod
   notes         String?      
+  paymentUrl    String?
+  invoiceId     String?       @unique
   
   subtotal      Int
   tax           Int

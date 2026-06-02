@@ -59,10 +59,10 @@ export class CreateOrderDto {
 
   @ApiProperty({
     description: 'Metode pembayaran yang dipilih',
-    example: PaymentMethod.QRIS,
+    example: PaymentMethod.ONLINE,
     enum: PaymentMethod, // Menampilkan pilihan dropdown otomatis di Swagger UI
   })
-  @IsEnum(PaymentMethod, { message: 'Metode pembayaran harus CASH atau QRIS' })
+  @IsEnum(PaymentMethod, { message: 'Metode pembayaran harus CASH atau ONLINE' })
   paymentMethod!: PaymentMethod; // Menggunakan tipe Enum dari Prisma
 
   @ApiPropertyOptional({
