@@ -45,7 +45,7 @@ export class CreateMenuDto {
   })
   @IsOptional()
   @IsString()
-  imageUrl?: any;
+  imageUrl?: File | string; // Bisa berupa URL string atau file upload dari Multer
 
   @ApiPropertyOptional({
     description: 'Karakter emoji untuk mempercantik UI tampilan menu',

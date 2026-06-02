@@ -14,7 +14,7 @@ export class XenditService {
     // Praktik terbaik: Ambil dari .env agar dinamis saat di-deploy ke produksi.
     // Jika tidak ada di .env, default ke localhost:3000.
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
-    const returnUrl = `${frontendUrl}/kasir`; 
+    const returnUrl = `${frontendUrl}/demo`; 
 
     try {
       const response = await axios({
