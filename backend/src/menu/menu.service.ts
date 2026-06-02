@@ -1,5 +1,5 @@
 // src/menu/menu.service.ts
-import { Injectable, NotFoundException, BadRequestException} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
@@ -17,7 +17,6 @@ export class MenuService {
 
   // READ ALL: Ambil semua menu (inStockOnly = true untuk pelanggan, false untuk admin)
   async findAll(inStockOnly: boolean = true) {
-    // 👇 LOGIKA BARU: Jika untuk pelanggan, hanya tampilkan yang stoknya lebih besar dari 0 (gt: 0)
     const whereCondition = inStockOnly ? { jumlahStock: { gt: 0 } } : {};
     
     return this.prisma.menuItem.findMany({
@@ -44,20 +43,28 @@ export class MenuService {
     });
   }
 
-  // DELETE: Hapus menu (Admin)
+  // DELETE: Hapus menu (Admin) - FIXED VERSION 🚀
   async remove(id: number) {
-    // 1. Cek dulu apakah menunya memang ada
-    const menu = await this.prisma.menuItem.findUnique({ where: { id } });
+    // 1. Cek dulu apakah menunya memang ada, sekalian hitung ada berapa kali menu ini pernah dipesan
+    const menu = await this.prisma.menuItem.findUnique({ 
+      where: { id },
+      include: {
+        _count: {
+          select: { orderItems: true } // Menghitung total orderItems terkait secara efisien
+        }
+      }
+    });
+
     if (!menu) throw new NotFoundException(`Menu dengan ID #${id} tidak ditemukan`);
 
-    try {
-      // 2. Coba hapus
-      return await this.prisma.menuItem.delete({ where: { id } });
-    } catch (error) {
-      // 👇 LOGIKA BARU: Pesan error diubah agar relevan dengan fitur stok
+    // 2. Jika count > 0, gagalkan penghapusan secara sengaja sebelum database menghapus paksa riwayatnya
+    if (menu._count.orderItems > 0) {
       throw new BadRequestException(
-        'Menu tidak bisa dihapus karena sudah memiliki riwayat transaksi. Silakan ubah stok menjadi 0 saja.',
+        'Menu tidak bisa dihapus karena sudah memiliki riwayat transaksi. Silakan ubah stok menjadi 0 saja agar tidak tampil di aplikasi pelanggan.',
       );
     }
+
+    // 3. Jika benar-benar bersih belum pernah dipesan, baru boleh dihapus aman
+    return await this.prisma.menuItem.delete({ where: { id } });
   }
 }

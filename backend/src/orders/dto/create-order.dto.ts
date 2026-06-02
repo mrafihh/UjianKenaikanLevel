@@ -3,7 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsNotEmpty,
-  IsNumber,
+  IsInt, // Diubah dari IsNumber ke IsInt
   IsOptional,
   IsString,
   IsArray,
@@ -12,23 +12,32 @@ import {
   ArrayMinSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaymentMethod } from '@prisma/client'; // 1. Import enum langsung dari Prisma
 
-// 1. Definisikan dekorator Swagger untuk item di dalam pesanan
+// 2. Class untuk item di dalam pesanan
 class OrderItemDto {
   @ApiProperty({
     description: 'ID dari menu yang dipesan',
     example: 1,
   })
-  @IsNumber()
+  @IsInt({ message: 'Menu item ID harus berupa bilangan bulat' }) // Ketat sebagai Int
   menuItemId!: number;
 
   @ApiProperty({
     description: 'Jumlah porsi/item yang dipesan',
     example: 2,
   })
-  @IsNumber()
+  @IsInt({ message: 'Quantity harus berupa bilangan bulat' }) // Ketat sebagai Int
   @Min(1, { message: 'Quantity minimal 1' })
   quantity!: number;
+
+  @ApiPropertyOptional({
+    description: 'Catatan khusus untuk item ini (misal: pedas karet 2, tanpa es)',
+    example: 'Pedas banget, gak pakai sayur',
+  })
+  @IsOptional()
+  @IsString()
+  notes?: string; // 3. Ditambahkan agar sinkron dengan OrderItem.notes di Prisma
 }
 
 export class CreateOrderDto {
@@ -50,24 +59,23 @@ export class CreateOrderDto {
 
   @ApiProperty({
     description: 'Metode pembayaran yang dipilih',
-    example: 'QRIS',
-    enum: ['CASH', 'QRIS'], // Menampilkan pilihan dropdown di Swagger UI
+    example: PaymentMethod.QRIS,
+    enum: PaymentMethod, // Menampilkan pilihan dropdown otomatis di Swagger UI
   })
-  @IsEnum(['CASH', 'QRIS'], { message: 'Metode pembayaran harus CASH atau QRIS' })
-  paymentMethod!: 'CASH' | 'QRIS';
+  @IsEnum(PaymentMethod, { message: 'Metode pembayaran harus CASH atau QRIS' })
+  paymentMethod!: PaymentMethod; // Menggunakan tipe Enum dari Prisma
 
   @ApiPropertyOptional({
-    description: 'Catatan tambahan untuk pesanan (misal: pedas, tanpa es)',
-    example: 'Nasi gorengnya minta pedas karet dua, es teh manisnya diganti hangat',
+    description: 'Catatan umum/keseluruhan untuk pesanan',
+    example: 'Antar sendok tambahan ya',
   })
   @IsOptional()
   @IsString()
   notes?: string;
 
-  // 2. Gunakan type dan isArray agar Swagger tahu ini adalah list dari OrderItemDto
   @ApiProperty({
     description: 'Daftar item menu yang dipesan',
-    type: [OrderItemDto], // Menghubungkan ke class OrderItemDto di atas
+    type: [OrderItemDto],
   })
   @IsArray()
   @ArrayMinSize(1, { message: 'Pesanan tidak boleh kosong' })

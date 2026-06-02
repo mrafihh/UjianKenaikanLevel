@@ -65,7 +65,7 @@ export class OrdersController {
   @ApiUnauthorizedResponse({ description: 'Token JWT tidak valid atau tidak disertakan.' })
   @ApiForbiddenResponse({ description: 'Akses ditolak (Bukan Admin/Kasir).' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN', 'KASIR')
+  @Roles('ADMIN')
   findAll(@Query('status') status?: string) {
     return this.ordersService.findAll(status);
   }
@@ -88,7 +88,7 @@ export class OrdersController {
   @ApiUnauthorizedResponse({ description: 'Sesi login tidak sah.' })
   @ApiForbiddenResponse({ description: 'Akses ditolak (Bukan Admin/Kasir).' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN', 'KASIR')
+  @Roles('ADMIN')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.findOne(id);
   }
@@ -112,7 +112,7 @@ export class OrdersController {
   @ApiUnauthorizedResponse({ description: 'Token tidak valid.' })
   @ApiForbiddenResponse({ description: 'Akses ditolak.' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN', 'KASIR')
+  @Roles('ADMIN')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateOrderDto,
@@ -152,7 +152,7 @@ export class OrdersController {
   @ApiUnauthorizedResponse({ description: 'Sesi login tidak sah.' })
   @ApiForbiddenResponse({ description: 'Akses ditolak.' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN', 'KASIR')
+  @Roles('ADMIN')
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status') status: string,

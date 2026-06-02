@@ -1,5 +1,7 @@
+// src/menu/dto/create-menu.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Min, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Min, IsNotEmpty, IsInt, IsOptional, IsString, IsEnum } from 'class-validator';
+import { MenuCategory } from '@prisma/client'; // Import enum langsung dari Prisma
 
 export class CreateMenuDto {
   @ApiProperty({
@@ -10,7 +12,6 @@ export class CreateMenuDto {
   @IsNotEmpty({ message: 'Nama menu wajib diisi' })
   name!: string;
 
-  // Menggunakan @ApiPropertyOptional karena field ini bersifat optional
   @ApiPropertyOptional({
     description: 'Deskripsi singkat mengenai komposisi atau rasa menu',
     example: 'Nasi goreng dengan potongan daging kambing muda dan rempah pilihan',
@@ -20,21 +21,22 @@ export class CreateMenuDto {
   description?: string;
 
   @ApiProperty({
-    description: 'Harga menu dalam satuan Rupiah (angka saja)',
+    description: 'Harga menu dalam satuan Rupiah (harus bilangan bulat/integer)',
     example: 35000,
   })
-  @IsNumber()
+  @IsInt({ message: 'Harga harus berupa bilangan bulat' }) // Diubah dari IsNumber ke IsInt sesuai type Int Prisma
+  @Min(0, { message: 'Harga tidak boleh negatif' })
   @IsNotEmpty({ message: 'Harga wajib diisi' })
   price!: number;
 
   @ApiProperty({
-    description: 'Kategori dari menu',
-    example: 'MAKANAN',
-    enum: ['MAKANAN', 'MINUMAN', 'SNACK'], // Menampilkan daftar pilihan yang valid di Swagger UI
+    description: 'Kategori dari menu berdasarkan enum Prisma',
+    example: MenuCategory.FOOD,
+    enum: MenuCategory, // Otomatis menampilkan pilihan FOOD, DRINK, SNACK di Swagger
   })
-  @IsString()
+  @IsEnum(MenuCategory, { message: 'Kategori harus berupa FOOD, DRINK, atau SNACK' })
   @IsNotEmpty({ message: 'Kategori wajib diisi' })
-  category!: string;
+  category!: MenuCategory; // Tipenya diganti menggunakan enum dari Prisma
 
   @ApiPropertyOptional({
     description: 'URL link gambar atau foto dari menu',
@@ -44,11 +46,19 @@ export class CreateMenuDto {
   @IsString()
   imageUrl?: string;
 
+  @ApiPropertyOptional({
+    description: 'Karakter emoji untuk mempercantik UI tampilan menu',
+    example: '🍳',
+  })
+  @IsOptional()
+  @IsString()
+  emoji?: string; // Ditambahkan sesuai field emoji di MenuItem Prisma
+
   @ApiProperty({
     description: 'Jumlah stok awal menu yang tersedia',
     example: 50,
   })
-  @IsNumber()
+  @IsInt({ message: 'Jumlah stock harus berupa bilangan bulat' }) // Diubah ke IsInt
   @Min(0, { message: 'Jumlah stock tidak boleh negatif' })
   jumlahStock!: number;
 }
