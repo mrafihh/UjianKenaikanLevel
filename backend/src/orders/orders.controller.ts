@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   UseGuards,
+  Res,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -29,6 +30,7 @@ import {
   ApiNotFoundResponse, 
   ApiBody
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -163,5 +165,33 @@ export class OrdersController {
       message: `Status pesanan #${id} berhasil diubah menjadi ${status}`,
       data: data,
     };
+  }
+
+  // 👇 ENDPOINT BARU: Download Struk PDF
+  @Get(':id/receipt')
+  @ApiOperation({ 
+    summary: 'Download Struk PDF (Publik/Customer)', 
+    description: 'Endpoint untuk mencetak atau mengunduh struk pesanan dalam bentuk file PDF.' 
+  })
+  @ApiParam({ 
+    name: 'id', 
+    type: Number, 
+    description: 'ID pesanan', 
+    example: 1 
+  })
+  @ApiOkResponse({ description: 'File PDF struk berhasil diunduh.' })
+  @ApiNotFoundResponse({ description: 'Pesanan tidak ditemukan.' })
+  async downloadReceipt(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response
+  ) {
+    const pdfBuffer = await this.ordersService.generateReceiptPdf(id);
+// ✅ Gunakan setHeader (bawaan Node.js murni, TypeScript pasti kenal)
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=struk-restoku-${id}.pdf`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    // ✅ Gunakan send
+    res.send(pdfBuffer);
   }
 }

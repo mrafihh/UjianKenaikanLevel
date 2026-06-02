@@ -249,4 +249,71 @@ export class OrdersService {
       include: { items: { include: { menuItem: true } } },
     });
   }
+
+  // 👇 FUNGSI BARU: Generator PDF
+  async generateReceiptPdf(orderId: number): Promise<Buffer> {
+    // 1. Ambil data order lengkap
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: { menuItem: true },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order #${orderId} tidak ditemukan`);
+    }
+    const PDFDocument = require('pdfkit');
+    // 2. Buat file PDF
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ size: 'A6', margin: 15 });
+      const buffers: Buffer[] = [];
+
+      doc.on('data', (chunk) => buffers.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', (err) => reject(err));
+
+      // Header
+      doc.fontSize(14).text('RESTOKU APP', { align: 'center', bold: true });
+      doc.fontSize(8).text('Jl. Sukarno Hatta No. 10, Malang', { align: 'center' });
+      doc.text('------------------------------------------------', { align: 'center' });
+
+      // Info Customer & Transaksi
+      doc.fontSize(8);
+      doc.text(`No. Nota : #ORD-${order.id}`);
+      doc.text(`Tanggal  : ${new Date(order.createdAt).toLocaleString('id-ID')}`);
+      doc.text(`Customer : ${order.customerName}`);
+      doc.text(`Meja     : ${order.tableNumber}`);
+      doc.text(`Metode   : ${order.paymentMethod}`);
+      doc.text('------------------------------------------------', { align: 'center' });
+
+      // Item Menu
+      doc.text('Item', 15, doc.y, { bold: true });
+      doc.text('Qty', 160, doc.y, { bold: true });
+      doc.text('Total', 220, doc.y, { bold: true });
+      doc.moveDown(0.5);
+
+      order.items.forEach((item) => {
+        const itemTotal = item.unitPrice * item.quantity;
+        doc.text(`${item.menuItem.name}`, 15, doc.y);
+        doc.text(`${item.quantity}x`, 160, doc.y);
+        doc.text(`Rp ${itemTotal.toLocaleString('id-ID')}`, 220, doc.y);
+        doc.moveDown(0.3);
+      });
+
+      doc.text('------------------------------------------------', 15, doc.y, { align: 'center' });
+      
+      // Total Pembayaran
+      doc.text(`Subtotal : Rp ${order.subtotal.toLocaleString('id-ID')}`, { align: 'right' });
+      doc.text(`Pajak    : Rp ${order.tax.toLocaleString('id-ID')}`, { align: 'right' });
+      doc.fontSize(10).text(`TOTAL    : Rp ${order.total.toLocaleString('id-ID')}`, { align: 'right', bold: true });
+      
+      doc.moveDown(1);
+      doc.fontSize(8).text('Terima kasih atas kunjungan Anda!', { align: 'center', italic: true });
+
+      doc.end();
+    });
+  }
 }
