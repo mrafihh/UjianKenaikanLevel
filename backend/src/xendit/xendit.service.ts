@@ -1,6 +1,6 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios, { AxiosError } from 'axios'; // 👈 Tambahkan import AxiosError di sini
+import axios, { AxiosError } from 'axios';
 
 @Injectable()
 export class XenditService {
@@ -9,6 +9,12 @@ export class XenditService {
   async createInvoice(orderData: any) {
     const secretKey = this.configService.get<string>('XENDIT_SECRET_KEY');
     const authHeader = 'Basic ' + Buffer.from(secretKey + ':').toString('base64');
+
+    // 💡 Tentukan URL Frontend Anda.
+    // Praktik terbaik: Ambil dari .env agar dinamis saat di-deploy ke produksi.
+    // Jika tidak ada di .env, default ke localhost:3000.
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+    const returnUrl = `${frontendUrl}/kasir`; 
 
     try {
       const response = await axios({
@@ -26,16 +32,17 @@ export class XenditService {
             given_names: orderData.customerName,
             email: orderData.customerEmail,
           },
+          // 👇 LOGIKA URL REDIRECT (FRONTEND POP-UP TRIGGER) DITAMBAHKAN DI SINI 👇
+          success_redirect_url: `${returnUrl}?payment=success&order_id=${orderData.orderId}`,
+          failure_redirect_url: `${returnUrl}?payment=failed&order_id=${orderData.orderId}`,
         },
       });
       return response.data;
       
-    } catch (error) { // 👈 Bagian yang diubah
-      // Mengecek apakah error ini berasal dari pemanggilan Axios (HTTP request)
+    } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error('Xendit Error:', error.response?.data || error.message);
       } else {
-        // Jika error berasal dari hal lain (misal syntax error)
         console.error('Unknown Error:', error);
       }
       

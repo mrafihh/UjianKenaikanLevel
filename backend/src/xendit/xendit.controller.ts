@@ -2,8 +2,9 @@ import { Controller, Post, Body, Headers, UnauthorizedException } from '@nestjs/
 import { ConfigService } from '@nestjs/config';
 import { XenditService } from './xendit.service';
 import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
-import { CreateXenditDto } from './dto/create-xendit.dto'; // 👈 Import DTO Checkout
-import { XenditWebhookDto } from './dto/xendit-webhook.dto';   // 👈 Import DTO Webhook
+import { CreateXenditDto } from './dto/create-xendit.dto';
+import { XenditWebhookDto } from './dto/xendit-webhook.dto';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @ApiTags('Payment')
 @Controller('api/payment')
@@ -11,13 +12,14 @@ export class XenditController {
   constructor(
     private readonly xenditService: XenditService,
     private readonly configService: ConfigService,
-  ) {}
+    private readonly prisma: PrismaService,
+  ) { }
 
   @Post('checkout')
-  @ApiOperation({ summary: 'Membuat link pembayaran Xendit' }) // 👈 Tambahan deskripsi Swagger
-  async createPayment(@Body() body: CreateXenditDto) { // 👈 Ubah 'any' menjadi 'CreateXenditDto'
+  @ApiOperation({ summary: 'Membuat link pembayaran Xendit' }) // 
+  async createPayment(@Body() body: CreateXenditDto) {
     const invoice = await this.xenditService.createInvoice(body);
-    
+
     return {
       message: 'Berhasil membuat tagihan',
       checkout_url: invoice.invoice_url,
@@ -38,8 +40,24 @@ export class XenditController {
     }
 
     if (body.status === 'PAID' || body.status === 'SETTLED') {
-      console.log(`Pesanan ${body.external_id} LUNAS sebesar ${body.amount}`);
-      // Lakukan update database Prisma di sini
+      // 💡 Ganti body.paid_amount menjadi body.amount
+      console.log(`Pesanan ${body.external_id} LUNAS sebesar Rp ${body.amount.toLocaleString('id-ID')}`);
+
+      try {
+        await this.prisma.order.update({
+          where: {
+            id: parseInt(body.external_id, 10)
+          },
+          data: {
+            status: 'PAID'
+          },
+        });
+
+        console.log(`✅ Database Berhasil Diperbarui: Status Order #${body.external_id} sekarang PAID!`);
+      } catch (error) {
+        // 👈 3. SOLUSI ERROR.MESSAGE: Lakukan casting (error as any) agar TypeScript mengizinkan akses properti .message
+        console.error(`❌ Gagal memperbarui database untuk Order #${body.external_id}:`, (error as any).message);
+      }
     }
 
     return { message: 'Webhook received' };
