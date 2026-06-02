@@ -1,7 +1,7 @@
 // src/menu/menu.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CloudinaryService } from '../cloudinary/cloudinary.service'; // 👈 Tambahkan import ini
+import { CloudinaryService } from '../cloudinary/cloudinary.service'; 
 import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
 
@@ -9,7 +9,7 @@ import { UpdateMenuDto } from './dto/update-menu.dto';
 export class MenuService {
   constructor(
     private prisma: PrismaService,
-    private cloudinaryService: CloudinaryService // 👈 Inject CloudinaryService di sini
+    private cloudinaryService: CloudinaryService 
   ) {}
 
   // CREATE: Tambah menu baru (Admin)
@@ -18,10 +18,16 @@ export class MenuService {
   async create(dto: CreateMenuDto, file?: Express.Multer.File) {
     let uploadedImageUrl: string | undefined = undefined;
 
-    // 1. Jika admin melampirkan file gambar, upload dulu ke Cloudinary
+// 1. Jika admin melampirkan file gambar, upload dulu ke Cloudinary
     if (file) {
-      const uploadResult = await this.cloudinaryService.uploadFile(file);
-      uploadedImageUrl = uploadResult.secure_url;
+      try {
+        const uploadResult = await this.cloudinaryService.uploadFile(file);
+        uploadedImageUrl = uploadResult.secure_url;
+      } catch (error) {
+        // 👇 Menangkap error Cloudinary agar tidak menyebabkan aplikasi crash (500)
+        console.error('Cloudinary Upload Error:', error);
+        throw new BadRequestException('Gagal mengunggah gambar. Pastikan kredensial Cloudinary valid dan gambar tidak rusak.');
+      }
     }
 
     // 2. Antisipasi tipe data Multipart/Form-Data (Ubah string angka menjadi Integer)
@@ -66,12 +72,18 @@ export class MenuService {
   async update(id: number, dto: UpdateMenuDto, file?: Express.Multer.File) {
     await this.findOne(id); // Pastikan item ada sebelum diupdate
 
-    let uploadedImageUrl: string | undefined = undefined; // 👈 Berikan tipe data yang jelas
+    let uploadedImageUrl: string | undefined = undefined; 
 
-    // 1. Jika admin melampirkan gambar baru, unggah ke Cloudinary
+// 1. Jika admin melampirkan file gambar, upload dulu ke Cloudinary
     if (file) {
-      const uploadResult = await this.cloudinaryService.uploadFile(file);
-      uploadedImageUrl = uploadResult.secure_url; // Ambil URL HTTPS dari Cloudinary
+      try {
+        const uploadResult = await this.cloudinaryService.uploadFile(file);
+        uploadedImageUrl = uploadResult.secure_url;
+      } catch (error) {
+        // 👇 Menangkap error Cloudinary agar tidak menyebabkan aplikasi crash (500)
+        console.error('Cloudinary Upload Error:', error);
+        throw new BadRequestException('Gagal mengunggah gambar. Pastikan kredensial Cloudinary valid dan gambar tidak rusak.');
+      }
     }
 
     // 2. Antisipasi tipe data Multipart/Form-Data

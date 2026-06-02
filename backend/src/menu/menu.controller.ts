@@ -11,10 +11,10 @@ import {
   ParseBoolPipe, 
   DefaultValuePipe, 
   UseGuards,
-  UseInterceptors,     // 👈 Ditambahkan untuk penanganan file upload
-  UploadedFile        // 👈 Ditambahkan untuk menangkap objek file gambar
+  UseInterceptors,     
+  UploadedFile        
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express'; // 👈 Ditambahkan
+import { FileInterceptor } from '@nestjs/platform-express'; 
 import { MenuService } from './menu.service';
 import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
@@ -33,8 +33,8 @@ import {
   ApiUnauthorizedResponse, 
   ApiForbiddenResponse, 
   ApiNotFoundResponse,
-  ApiConsumes,         // 👈 Ditambahkan untuk dokumentasi Swagger multipart/form-data
-  ApiBody             // 👈 Ditambahkan untuk merinci skema body form-data di Swagger
+  ApiConsumes,
+  ApiBody
 } from '@nestjs/swagger';
 
 @ApiTags('Menu')
@@ -46,8 +46,8 @@ export class MenuController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
-  @UseInterceptors(FileInterceptor('image')) // 👈 Tambahkan interceptor file di sini
-  @ApiConsumes('multipart/form-data')       // 👈 Mengubah tipe form di Swagger menjadi form-data
+  @UseInterceptors(FileInterceptor('image')) 
+  @ApiConsumes('multipart/form-data')       
   @ApiBody({
     description: 'Menambahkan menu baru beserta file gambar',
     schema: {
@@ -66,7 +66,7 @@ export class MenuController {
           description: 'File gambar menu (.png, .jpg, .jpeg, .webp) - Opsional',
         },
       },
-      required: ['name', 'price', 'category'], // 👈 Field yang wajib diisi sesuai schema Prisma
+      required: ['name', 'price', 'category'], 
     },
   })
   @ApiOperation({ 
@@ -79,7 +79,7 @@ export class MenuController {
   @ApiForbiddenResponse({ description: 'Akses ditolak karena user bukan ADMIN.' })
   async create(
     @Body() createMenuDto: CreateMenuDto,
-    @UploadedFile() file?: Express.Multer.File, // 👈 Ambil payload file gambar di sini
+    @UploadedFile() file?: Express.Multer.File, 
   ) {
     // Kirim DTO beserta file gambar ke service
     const data = await this.menuService.create(createMenuDto, file);
@@ -130,8 +130,8 @@ export class MenuController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
-  @UseInterceptors(FileInterceptor('image')) // 👈 'image' adalah KEY multipart/form-data saat upload file
-  @ApiConsumes('multipart/form-data')       // 👈 Menginstruksikan Swagger UI untuk mengubah tipe form
+  @UseInterceptors(FileInterceptor('image')) 
+  @ApiConsumes('multipart/form-data')       
   @ApiBody({
     description: 'Modifikasi sebagian data menu sekaligus mengunggah gambar baru',
     schema: {
@@ -170,7 +170,7 @@ export class MenuController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateMenuDto: UpdateMenuDto,
-    @UploadedFile() file?: Express.Multer.File, // 👈 Menangkap payload gambar opsional dari admin
+    @UploadedFile() file?: Express.Multer.File, 
   ) {
     // Mengirim data DTO sekaligus objek file gambar ke menuService
     const data = await this.menuService.update(id, updateMenuDto, file);

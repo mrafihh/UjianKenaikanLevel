@@ -1,9 +1,22 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+// src/cloudinary/cloudinary.service.ts
+import { Injectable, BadRequestException, Logger} from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse, UploadApiErrorResponse } from 'cloudinary';
 import * as streamifier from 'streamifier';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CloudinaryService {
+  private readonly logger = new Logger(CloudinaryService.name);
+
+  constructor(private config: ConfigService) {
+    cloudinary.config({
+      cloud_name: this.config.get<string>('CLOUDINARY_CLOUD_NAME'),
+      api_key: this.config.get<string>('CLOUDINARY_API_KEY'),
+      api_secret: this.config.get<string>('CLOUDINARY_API_SECRET'),
+    });
+  }
+
+
   uploadFile(file: Express.Multer.File): Promise<UploadApiResponse | UploadApiErrorResponse> {
     return new Promise((resolve, reject) => {
       if (!file) {

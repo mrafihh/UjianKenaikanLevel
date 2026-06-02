@@ -2,9 +2,9 @@
 import { Global, Module } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 
-@Global() // 👈 Membuat module ini bisa diakses di mana saja tanpa perlu di-import berulang kali
+@Global() 
 @Module({
   providers: [PrismaService],
-  exports: [PrismaService], // 👈 Membagikan PrismaService agar bisa dipakai modul lain
+  exports: [PrismaService], 
 })
 export class PrismaModule {}

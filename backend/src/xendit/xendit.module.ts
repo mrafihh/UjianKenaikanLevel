@@ -6,6 +6,6 @@ import { XenditController } from './xendit.controller';
 @Module({
   controllers: [XenditController],
   providers: [XenditService],
-  exports: [XenditService], // 👈 WAJIB ADA INI agar service bisa dipakai oleh OrdersModule
+  exports: [XenditService], 
 })
 export class XenditModule {}

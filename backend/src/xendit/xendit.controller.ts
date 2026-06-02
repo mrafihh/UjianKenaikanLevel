@@ -28,7 +28,7 @@ export class XenditController {
 
   @Post('webhook')
   @ApiOperation({ summary: 'Menerima notifikasi otomatis dari Xendit' })
-  @ApiBody({ type: XenditWebhookDto }) // 👈 Memberi tahu Swagger bentuk payload Webhook
+  @ApiBody({ type: XenditWebhookDto }) 
   async handleWebhook(
     @Headers('x-callback-token') callbackToken: string,
     @Body() body: any, // Tetap gunakan any untuk body aktual karena payload Xendit sangat besar

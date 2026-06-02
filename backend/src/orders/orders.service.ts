@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { XenditService } from '../xendit/xendit.service'; // 👈 IMPORT XENDIT SERVICE
+import { XenditService } from '../xendit/xendit.service'; 
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 
@@ -15,7 +15,7 @@ const TAX_RATE = 0.1;
 export class OrdersService {
   constructor(
     private prisma: PrismaService,
-    private xenditService: XenditService, // 👈 INJECT XENDIT SERVICE DI SINI
+    private xenditService: XenditService, 
   ) {}
 
   async create(dto: CreateOrderDto) {

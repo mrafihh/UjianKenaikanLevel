@@ -25,13 +25,13 @@ export class MenuController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
-  @UseInterceptors(FileInterceptor('image')) // 👈 'image' adalah nama KEY field form-data saat upload
-  @ApiConsumes('multipart/form-data') // 👈 Beritahu Swagger kalau ini form-data
+  @UseInterceptors(FileInterceptor('image')) 
+  @ApiConsumes('multipart/form-data') 
   @ApiOperation({ summary: 'Update menu beserta gambar baru (Admin Only)' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateMenuDto: UpdateMenuDto,
-    @UploadedFile() file?: Express.Multer.File, // 👈 Menerima file gambar jika ada
+    @UploadedFile() file?: Express.Multer.File, 
   ) {
     const data = await this.menuService.update(id, updateMenuDto, file);
     return {

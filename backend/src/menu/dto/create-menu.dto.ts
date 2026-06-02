@@ -2,6 +2,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Min, IsNotEmpty, IsInt, IsOptional, IsString, IsEnum } from 'class-validator';
 import { MenuCategory } from '@prisma/client'; // Import enum langsung dari Prisma
+import { Type } from 'class-transformer';
 
 export class CreateMenuDto {
   @ApiProperty({
@@ -24,9 +25,9 @@ export class CreateMenuDto {
     description: 'Harga menu dalam satuan Rupiah (harus bilangan bulat/integer)',
     example: 35000,
   })
+  @Type(() => Number)
   @IsInt({ message: 'Harga harus berupa bilangan bulat' }) // Diubah dari IsNumber ke IsInt sesuai type Int Prisma
   @Min(0, { message: 'Harga tidak boleh negatif' })
-  @IsNotEmpty({ message: 'Harga wajib diisi' })
   price!: number;
 
   @ApiProperty({
@@ -44,7 +45,7 @@ export class CreateMenuDto {
   })
   @IsOptional()
   @IsString()
-  imageUrl?: string;
+  imageUrl?: any;
 
   @ApiPropertyOptional({
     description: 'Karakter emoji untuk mempercantik UI tampilan menu',
@@ -58,6 +59,7 @@ export class CreateMenuDto {
     description: 'Jumlah stok awal menu yang tersedia',
     example: 50,
   })
+  @Type(() => Number)
   @IsInt({ message: 'Jumlah stock harus berupa bilangan bulat' }) // Diubah ke IsInt
   @Min(0, { message: 'Jumlah stock tidak boleh negatif' })
   jumlahStock!: number;
