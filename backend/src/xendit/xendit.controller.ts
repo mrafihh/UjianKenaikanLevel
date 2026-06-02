@@ -16,7 +16,7 @@ export class XenditController {
   ) { }
 
   @Post('checkout')
-  @ApiOperation({ summary: 'Membuat link pembayaran Xendit' }) // 
+  @ApiOperation({ summary: 'Membuat link pembayaran Xendit' })
   async createPayment(@Body() body: CreateXenditDto) {
     const invoice = await this.xenditService.createInvoice(body);
 
@@ -35,31 +35,68 @@ export class XenditController {
   ) {
     const validToken = this.configService.get<string>('XENDIT_CALLBACK_TOKEN');
 
+    // 1. Validasi Keamanan Token Callback
     if (callbackToken !== validToken) {
       throw new UnauthorizedException('Token webhook tidak valid');
     }
 
+    const orderId = parseInt(body.external_id, 10);
+
+    // 2. LOGIKA KETIKA PEMBAYARAN LUNAS (PAID / SETTLED)
     if (body.status === 'PAID' || body.status === 'SETTLED') {
-      // 💡 Ganti body.paid_amount menjadi body.amount
       console.log(`Pesanan ${body.external_id} LUNAS sebesar Rp ${body.amount.toLocaleString('id-ID')}`);
 
       try {
+        // 🔍 Proteksi Ganda (Idempotency): Cek status pesanan saat ini di database
+        const existingOrder = await this.prisma.order.findUnique({
+          where: { id: orderId }
+        });
+
+        if (!existingOrder) {
+          console.warn(`⚠️ Webhook Diabaikan: Order #${orderId} tidak ditemukan di database.`);
+          return { message: 'Order not found' };
+        }
+
+        if (existingOrder.status === 'PAID') {
+          console.log(`ℹ️ Webhook Diabaikan: Order #${orderId} sudah berstatus PAID sebelumnya.`);
+          return { message: 'Webhook already processed' };
+        }
+
+        // 📝 Update status ke PAID jika status sebelumnya masih PENDING
         await this.prisma.order.update({
-          where: {
-            id: parseInt(body.external_id, 10)
-          },
-          data: {
-            status: 'PAID'
-          },
+          where: { id: orderId },
+          data: { status: 'PAID' },
         });
 
         console.log(`✅ Database Berhasil Diperbarui: Status Order #${body.external_id} sekarang PAID!`);
       } catch (error) {
-        // 👈 3. SOLUSI ERROR.MESSAGE: Lakukan casting (error as any) agar TypeScript mengizinkan akses properti .message
         console.error(`❌ Gagal memperbarui database untuk Order #${body.external_id}:`, (error as any).message);
+      }
+    } 
+    
+    // 3. LOGIKA KETIKA TAGIHAN KEDALUWARSA (EXPIRED)
+    else if (body.status === 'EXPIRED') {
+      console.log(`⚠️ Tagihan Xendit untuk Order #${body.external_id} telah KEDALUWARSA.`);
+
+      try {
+        const existingOrder = await this.prisma.order.findUnique({
+          where: { id: orderId }
+        });
+
+        // Hanya batalkan jika pesanan memang masih PENDING
+        if (existingOrder && existingOrder.status === 'PENDING') {
+          await this.prisma.order.update({
+            where: { id: orderId },
+            data: { status: 'CANCELLED' }, // Mengubah status menjadi CANCELLED sesuai enum Anda
+          });
+          console.log(`🚫 Database Berhasil Diperbarui: Order #${body.external_id} otomatis dibatalkan.`);
+        }
+      } catch (error) {
+        console.error(`❌ Gagal membatalkan Order #${body.external_id}:`, (error as any).message);
       }
     }
 
-    return { message: 'Webhook received' };
+    // Selalu kembalikan respon sukses (HTTP 201/200) agar Xendit tahu kirimannya sukses berlabuh
+    return { message: 'Webhook received and processed safely' };
   }
 }

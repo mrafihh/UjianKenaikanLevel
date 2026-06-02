@@ -1,17 +1,45 @@
 // src/menu/menu.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service'; // 👈 Tambahkan import ini
 import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
 
 @Injectable()
 export class MenuService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cloudinaryService: CloudinaryService // 👈 Inject CloudinaryService di sini
+  ) {}
 
   // CREATE: Tambah menu baru (Admin)
-  async create(dto: CreateMenuDto) {
+// CREATE: Tambah menu baru (Admin)
+  // 👇 Tambahkan parameter `file?: Express.Multer.File`
+  async create(dto: CreateMenuDto, file?: Express.Multer.File) {
+    let uploadedImageUrl: string | undefined = undefined;
+
+    // 1. Jika admin melampirkan file gambar, upload dulu ke Cloudinary
+    if (file) {
+      const uploadResult = await this.cloudinaryService.uploadFile(file);
+      uploadedImageUrl = uploadResult.secure_url;
+    }
+
+    // 2. Antisipasi tipe data Multipart/Form-Data (Ubah string angka menjadi Integer)
+    const parsedPrice = dto.price ? parseInt(dto.price as any, 10) : 0;
+    const parsedStock = dto.jumlahStock ? parseInt(dto.jumlahStock as any, 10) : 0;
+
+    // Pisahkan price dan jumlahStock versi string bawaan DTO agar tidak merusak database
+    const { price, jumlahStock, ...restDto } = dto as any;
+
+    // 3. Simpan data baru ke database
     return this.prisma.menuItem.create({
-      data: dto,
+      data: {
+        ...restDto,
+        price: parsedPrice,          // Masukkan price yang sudah berwujud angka
+        jumlahStock: parsedStock,    // Masukkan stok yang sudah berwujud angka
+        // Gunakan teknik aman TypeScript seperti di fungsi PATCH kemarin
+        ...(uploadedImageUrl ? { imageUrl: uploadedImageUrl } : {}), 
+      },
     });
   }
 
@@ -34,12 +62,35 @@ export class MenuService {
     return item;
   }
 
-  // UPDATE: Ubah data menu (Admin)
-  async update(id: number, dto: UpdateMenuDto) {
+// UPDATE: Ubah data menu (Admin)
+  async update(id: number, dto: UpdateMenuDto, file?: Express.Multer.File) {
     await this.findOne(id); // Pastikan item ada sebelum diupdate
+
+    let uploadedImageUrl: string | undefined = undefined; // 👈 Berikan tipe data yang jelas
+
+    // 1. Jika admin melampirkan gambar baru, unggah ke Cloudinary
+    if (file) {
+      const uploadResult = await this.cloudinaryService.uploadFile(file);
+      uploadedImageUrl = uploadResult.secure_url; // Ambil URL HTTPS dari Cloudinary
+    }
+
+    // 2. Antisipasi tipe data Multipart/Form-Data
+    const parsedPrice = dto.price !== undefined ? parseInt(dto.price as any, 10) : undefined;
+    const parsedStock = dto.jumlahStock !== undefined ? parseInt(dto.jumlahStock as any, 10) : undefined;
+
+    // Pisahkan price dan jumlahStock lama (string) agar tidak menimpa data baru
+    const { price, jumlahStock, ...restDto } = dto as any;
+
+    // 3. Simpan perubahan ke database
     return this.prisma.menuItem.update({
       where: { id },
-      data: dto,
+      data: {
+        ...restDto, // Masukkan semua field string (name, description, category)
+        // 👇 Gunakan ternary operator agar selalu mengembalikan object
+        ...(parsedPrice !== undefined ? { price: parsedPrice } : {}), 
+        ...(parsedStock !== undefined ? { jumlahStock: parsedStock } : {}), 
+        ...(uploadedImageUrl ? { imageUrl: uploadedImageUrl } : {}), 
+      },
     });
   }
 

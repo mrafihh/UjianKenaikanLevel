@@ -1,26 +1,29 @@
-import { Injectable } from '@nestjs/common';
-import { CreateCloudinaryDto } from './dto/create-cloudinary.dto';
-import { UpdateCloudinaryDto } from './dto/update-cloudinary.dto';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { v2 as cloudinary, UploadApiResponse, UploadApiErrorResponse } from 'cloudinary';
+import * as streamifier from 'streamifier';
 
 @Injectable()
 export class CloudinaryService {
-  create(createCloudinaryDto: CreateCloudinaryDto) {
-    return 'This action adds a new cloudinary';
-  }
+  uploadFile(file: Express.Multer.File): Promise<UploadApiResponse | UploadApiErrorResponse> {
+    return new Promise((resolve, reject) => {
+      if (!file) {
+        throw new BadRequestException('File tidak ditemukan');
+      }
 
-  findAll() {
-    return `This action returns all cloudinary`;
-  }
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'restoku_menu', // Nama folder otomatis di Cloudinary Anda
+          allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          if (!result) return reject(new Error('Gagal mengunggah gambar ke Cloudinary'));
+          resolve(result);
+        },
+      );
 
-  findOne(id: number) {
-    return `This action returns a #${id} cloudinary`;
-  }
-
-  update(id: number, updateCloudinaryDto: UpdateCloudinaryDto) {
-    return `This action updates a #${id} cloudinary`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} cloudinary`;
+      // Mengubah buffer Multer menjadi stream dan mengirimkannya ke Cloudinary
+      streamifier.createReadStream(file.buffer).pipe(uploadStream);
+    });
   }
 }
