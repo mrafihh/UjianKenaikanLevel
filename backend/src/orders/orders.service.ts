@@ -250,8 +250,13 @@ export class OrdersService {
     });
   }
 
-  // 👇 FUNGSI BARU: Generator PDF
+// 👇 FUNGSI BARU: Generator PDF bergaya Receiptify (FINAL FIX)
   async generateReceiptPdf(orderId: number): Promise<Buffer> {
+    const restoName = await this.prisma.user.findFirst({
+      where: { role: 'ADMIN' },
+      select: { namaRestoran: true },
+    }).then(user => user?.namaRestoran || 'RESTO ANDA');
+
     // 1. Ambil data order lengkap
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
@@ -265,53 +270,124 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException(`Order #${orderId} tidak ditemukan`);
     }
+
     const PDFDocument = require('pdfkit');
+
     // 2. Buat file PDF
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'A6', margin: 15 });
+      // Lebar kertas 320, Margin 20. Ruang cetak = 280.
+      // 42 Karakter Courier size 10 hanya butuh 252 poin (Pasti muat & tidak auto-wrap!)
+      const doc = new PDFDocument({ size: [300, 700], margin: 20 });
       const buffers: Buffer[] = [];
 
       doc.on('data', (chunk) => buffers.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', (err) => reject(err));
 
-      // Header
-      doc.fontSize(14).text('RESTOKU APP', { align: 'center', bold: true });
-      doc.fontSize(8).text('Jl. Sukarno Hatta No. 10, Malang', { align: 'center' });
-      doc.text('------------------------------------------------', { align: 'center' });
+      // ==========================================
+      // PENGATURAN FONT & HELPER UNTUK MONOSPACE
+      // ==========================================
+      const LINE_LEN = 42; 
+      doc.font('Courier').fontSize(10); 
 
-      // Info Customer & Transaksi
-      doc.fontSize(8);
-      doc.text(`No. Nota : #ORD-${order.id}`);
-      doc.text(`Tanggal  : ${new Date(order.createdAt).toLocaleString('id-ID')}`);
-      doc.text(`Customer : ${order.customerName}`);
-      doc.text(`Meja     : ${order.tableNumber}`);
-      doc.text(`Metode   : ${order.paymentMethod}`);
-      doc.text('------------------------------------------------', { align: 'center' });
+      const center = (text: string) => {
+        const pad = Math.max(0, Math.floor((LINE_LEN - text.length) / 2));
+        return ' '.repeat(pad) + text;
+      };
 
-      // Item Menu
-      doc.text('Item', 15, doc.y, { bold: true });
-      doc.text('Qty', 160, doc.y, { bold: true });
-      doc.text('Total', 220, doc.y, { bold: true });
-      doc.moveDown(0.5);
+// 👇 HELPER YANG DI-UPGRADE: Mendukung ukuran & opsi PDFKit
+      const printLine = (text: string, isBold: boolean = false, size: number = 10, options: any = {}) => {
+        if (isBold) {
+          doc.font('Courier-Bold').fontSize(size);
+        } else {
+          doc.font('Courier').fontSize(size);
+        }
+        doc.text(text, options);
+      };
 
+      const justify = (left: string, right: string) => {
+        const space = Math.max(0, LINE_LEN - left.length - right.length);
+        return left + ' '.repeat(space) + right;
+      };
+
+      // ==========================================
+      // HEADER
+      // ==========================================
+      printLine((restoName.toUpperCase()), true, 20, {align: 'center'});
+
+      doc.moveDown(0.5); // Spasi kecil sebelum tabel item
+
+      // ORDER INFO
+      const orderIdStr = order.id.toString().padStart(4, '0');
+      printLine(`ORDER #${orderIdStr} FOR ${order.customerName.toUpperCase()}`);
+      
+      doc.moveDown(1); // Spasi kecil sebelum tanggal
+
+      const dateStr = new Date(order.createdAt).toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+      }).toUpperCase();
+      printLine(dateStr);
+
+
+      
+      // ==========================================
+      // TABEL ITEM
+      // ==========================================
+      printLine('-'.repeat(LINE_LEN));
+      printLine('QTY  ITEM                            PRICE');
+      printLine('-'.repeat(LINE_LEN));
+
+      let totalQty = 0;
+      
       order.items.forEach((item) => {
-        const itemTotal = item.unitPrice * item.quantity;
-        doc.text(`${item.menuItem.name}`, 15, doc.y);
-        doc.text(`${item.quantity}x`, 160, doc.y);
-        doc.text(`Rp ${itemTotal.toLocaleString('id-ID')}`, 220, doc.y);
-        doc.moveDown(0.3);
+        totalQty += item.quantity;
+        const qty = item.quantity.toString().padStart(2, '0');
+        const name = item.menuItem.name.toUpperCase();
+        // Format harga tanpa "Rp" agar rata kanan presisi
+        const priceStr = (item.unitPrice * item.quantity).toLocaleString('id-ID'); 
+        
+        // Hitung batas panjang nama item agar tidak menabrak harga
+        const maxNameLen = LINE_LEN - 5 - priceStr.length - 1; 
+        
+        if (name.length <= maxNameLen) {
+          printLine(`${qty}   ${name}`.padEnd(LINE_LEN - priceStr.length) + priceStr);
+        } else {
+          // Jika nama terlalu panjang, potong secara manual
+          const firstLine = name.substring(0, maxNameLen);
+          printLine(`${qty}   ${firstLine}`.padEnd(LINE_LEN - priceStr.length) + priceStr);
+          
+          let remaining = name.substring(maxNameLen);
+          while (remaining.length > 0) {
+            const chunk = remaining.substring(0, maxNameLen);
+            printLine(`     ${chunk}`); 
+            remaining = remaining.substring(maxNameLen);
+          }
+        }
       });
 
-      doc.text('------------------------------------------------', 15, doc.y, { align: 'center' });
-      
-      // Total Pembayaran
-      doc.text(`Subtotal : Rp ${order.subtotal.toLocaleString('id-ID')}`, { align: 'right' });
-      doc.text(`Pajak    : Rp ${order.tax.toLocaleString('id-ID')}`, { align: 'right' });
-      doc.fontSize(10).text(`TOTAL    : Rp ${order.total.toLocaleString('id-ID')}`, { align: 'right', bold: true });
-      
-      doc.moveDown(1);
-      doc.fontSize(8).text('Terima kasih atas kunjungan Anda!', { align: 'center', italic: true });
+      // ==========================================
+      // TOTALS
+      // ==========================================
+      printLine('-'.repeat(LINE_LEN));
+      printLine(justify('ITEM COUNT:', totalQty.toString()));
+      if (order.tax > 0) {
+        printLine(justify('SUBTOTAL:', order.subtotal.toLocaleString('id-ID')));
+        printLine(justify('TAX:', order.tax.toLocaleString('id-ID')));
+      }
+      printLine(justify('TOTAL:', order.total.toLocaleString('id-ID')));
+      printLine('-'.repeat(LINE_LEN));
+
+      // ==========================================
+      // PAYMENT & FOOTER
+      // ==========================================
+      printLine(`PAYMENT METHOD: ${order.paymentMethod.toUpperCase()}`);
+      printLine(`TABLE NUMBER: ${order.tableNumber}`);
+      printLine(`CUSTOMER: ${order.customerName.toUpperCase()}`);      
+
+      doc.moveDown(2);
+
+      printLine(center('THANK YOU FOR VISITING!'), true);
+      printLine(center('OrderEase'), true);
 
       doc.end();
     });
