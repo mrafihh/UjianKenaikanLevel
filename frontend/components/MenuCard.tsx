@@ -171,7 +171,7 @@ export default function MenuCard({ item, index }: MenuCardProps) {
                   <motion.button
                     key="add-btn"
                     initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: isAdding ? [1, 1.3, 0.88, 1.08, 1] : 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
-                    transition={{ duration: 0.4, type: 'spring', stiffness: 380 }}
+                    transition={{ duration: 0.15 }}
                     onClick={handleAdd}
                     className="flex-shrink-0 flex items-center gap-1 bg-brand hover:bg-brand-hover active:scale-95 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl transition-colors shadow-sm"
                   >

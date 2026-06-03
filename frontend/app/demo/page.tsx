@@ -292,7 +292,7 @@ function HomeContent() {
               </span>
             </div>
 
-            <AnimatePresence mode="wait">
+             <AnimatePresence mode="wait">
               <motion.div
                 key={activeCategory}
                 initial={{ opacity: 0, y: 8 }}
@@ -305,7 +305,7 @@ function HomeContent() {
                   <MenuCard key={item.id} item={item} index={i} />
                 ))}
               </motion.div>
-            </AnimatePresence>
+            </AnimatePresence>  
 
             {filteredItems.length === 0 && (
               <div className="text-center py-16">
