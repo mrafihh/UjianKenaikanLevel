@@ -13,9 +13,9 @@ import {
   PartyPopper,
 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
-import { formatCurrency, formatTime } from '@/lib/utils';
+import { formatCurrency, formatTime } from '@/lib/Utils';
 
-// Dynamic import untuk hindari SSR issue pada qrcode.react
+// Dynamic import — hindari SSR issue pada qrcode.react
 const QRCodeSVG = dynamic(
   () => import('qrcode.react').then((m) => m.QRCodeSVG),
   {
@@ -28,42 +28,58 @@ const QRCodeSVG = dynamic(
 
 interface QRPaymentModalProps {
   isOpen: boolean;
+  /** ID pesanan dari response POST /orders */
   orderId: string;
   tableNumber: string;
+  /** Nama pelanggan dari form checkout */
+  customerName: string;
+  /** Grand total sudah termasuk pajak — diteruskan dari CheckoutModal */
+  grandTotal: number;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const QRIS_COUNTDOWN_SECONDS = 300; // 5 menit
+const COUNTDOWN_SECONDS = 300; // 5 menit
 
 export default function QRPaymentModal({
   isOpen,
   orderId,
   tableNumber,
+  customerName,
+  grandTotal,
   onClose,
   onSuccess,
 }: QRPaymentModalProps) {
   const [isPaid, setIsPaid] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [countdown, setCountdown] = useState(QRIS_COUNTDOWN_SECONDS);
+  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [isExpired, setIsExpired] = useState(false);
 
-  const getTotalPrice = useCartStore((s) => s.getTotalPrice);
   const clearCart = useCartStore((s) => s.clearCart);
 
-  const totalPrice = getTotalPrice();
-  const taxAmount = Math.round(totalPrice * 0.11);
-  const grandTotal = totalPrice + taxAmount;
+  /**
+   * Payload QR — format menyerupai QRIS agar terlihat realistis.
+   * Berisi: ID Merchant, Order ID, Nama Pelanggan, Meja, Total.
+   * Pada implementasi nyata, string ini diganti dengan payload QRIS
+   * resmi dari payment gateway (Xendit, Midtrans, dll).
+   */
+  const qrData = [
+    'QRIS',
+    'ID.CO.WARUNGS.WWW01',
+    `WARUNG-SAFFRON`,
+    `ORD:${orderId}`,
+    `MEJA:${tableNumber}`,
+    customerName.toUpperCase(),
+    String(grandTotal),
+    'IDR',
+  ].join('|');
 
-  // Data yang di-encode ke QR — format standar QRIS-like
-  const qrData = `QRIS|WARUNG-SAFFRON|${orderId}|MEJA-${tableNumber}|${grandTotal}|IDR|${new Date().toISOString()}`;
-
-  // Reset semua state saat modal dibuka
+  // Reset state setiap kali modal dibuka
   useEffect(() => {
     if (isOpen) {
       setIsPaid(false);
       setIsSimulating(false);
-      setCountdown(QRIS_COUNTDOWN_SECONDS);
+      setCountdown(COUNTDOWN_SECONDS);
       setIsExpired(false);
     }
   }, [isOpen]);
@@ -79,7 +95,6 @@ export default function QRPaymentModal({
     return () => clearInterval(timer);
   }, [isOpen, isPaid, isExpired, countdown]);
 
-  // Simulasi pembayaran berhasil
   const handleSimulatePay = useCallback(async () => {
     if (isSimulating || isExpired) return;
     setIsSimulating(true);
@@ -89,7 +104,7 @@ export default function QRPaymentModal({
   }, [isSimulating, isExpired]);
 
   const handleRefreshQR = useCallback(() => {
-    setCountdown(QRIS_COUNTDOWN_SECONDS);
+    setCountdown(COUNTDOWN_SECONDS);
     setIsExpired(false);
   }, []);
 
@@ -121,9 +136,9 @@ export default function QRPaymentModal({
 
             <AnimatePresence mode="wait">
               {!isPaid ? (
-                /* ════════════════════════════════════
-                   PAYMENT STATE — QR Code displayed
-                   ════════════════════════════════════ */
+                /* ══════════════════════════════════════════
+                   PAYMENT VIEW — QR Code
+                   ══════════════════════════════════════════ */
                 <motion.div
                   key="payment-view"
                   initial={{ opacity: 0 }}
@@ -138,7 +153,10 @@ export default function QRPaymentModal({
                         Scan & Bayar
                       </h2>
                       <p className="text-stone-400 text-[11px] mt-0.5">
-                        Meja {tableNumber} &middot; <span className="font-mono">{orderId}</span>
+                        {customerName} · Meja {tableNumber}
+                      </p>
+                      <p className="text-stone-300 text-[10px] font-mono mt-0.5">
+                        {orderId}
                       </p>
                     </div>
                     {!isSimulating && (
@@ -153,7 +171,7 @@ export default function QRPaymentModal({
                     )}
                   </div>
 
-                  {/* Total */}
+                  {/* Total Amount */}
                   <div className="text-center mb-5">
                     <p className="text-stone-400 text-[10px] uppercase tracking-[0.18em] font-bold mb-1">
                       Total Pembayaran
@@ -166,7 +184,7 @@ export default function QRPaymentModal({
                     </p>
                   </div>
 
-                  {/* QR Code box */}
+                  {/* QR Code */}
                   <div className="flex justify-center mb-4">
                     <div className="relative">
                       <div
@@ -175,9 +193,12 @@ export default function QRPaymentModal({
                         }`}
                       >
                         {isSimulating ? (
-                          /* Processing overlay */
                           <div className="w-48 h-48 flex flex-col items-center justify-center gap-3">
-                            <Loader2 size={34} className="text-brand animate-spin" strokeWidth={2} />
+                            <Loader2
+                              size={34}
+                              className="text-brand animate-spin"
+                              strokeWidth={2}
+                            />
                             <p className="text-stone-500 text-[12px] font-medium text-center">
                               Memverifikasi pembayaran...
                             </p>
@@ -197,8 +218,14 @@ export default function QRPaymentModal({
                       {/* Expired overlay */}
                       {isExpired && !isSimulating && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/92 rounded-2xl">
-                          <Clock size={28} className="text-stone-400 mb-2" strokeWidth={1.5} />
-                          <p className="text-stone-700 text-[13px] font-semibold">QR Kedaluwarsa</p>
+                          <Clock
+                            size={28}
+                            className="text-stone-400 mb-2"
+                            strokeWidth={1.5}
+                          />
+                          <p className="text-stone-700 text-[13px] font-semibold">
+                            QR Kedaluwarsa
+                          </p>
                           <button
                             onClick={handleRefreshQR}
                             className="mt-3 flex items-center gap-1.5 text-brand text-[12px] font-bold"
@@ -209,24 +236,35 @@ export default function QRPaymentModal({
                         </div>
                       )}
 
-                      {/* Animated pulse ring (only when active) */}
+                      {/* Pulse ring saat QR aktif */}
                       {!isExpired && !isSimulating && (
                         <motion.div
-                          animate={{ scale: [1, 1.07, 1], opacity: [0.55, 0, 0.55] }}
-                          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                          animate={{
+                            scale: [1, 1.07, 1],
+                            opacity: [0.55, 0, 0.55],
+                          }}
+                          transition={{
+                            duration: 2.2,
+                            repeat: Infinity,
+                            ease: 'easeInOut',
+                          }}
                           className="absolute inset-0 border-2 border-brand rounded-2xl pointer-events-none"
                         />
                       )}
                     </div>
                   </div>
 
-                  {/* QRIS divider label */}
+                  {/* QRIS Label */}
                   <div className="flex items-center gap-2 mb-3">
                     <div className="h-px bg-stone-100 flex-1" />
                     <div className="flex items-center gap-1.5 px-3 py-1 bg-stone-50 border border-stone-100 rounded-full">
-                      <span className="text-brand font-black text-[11px] tracking-widest">QRIS</span>
+                      <span className="text-brand font-black text-[11px] tracking-widest">
+                        QRIS
+                      </span>
                       <span className="text-stone-300 text-xs">·</span>
-                      <span className="text-stone-500 text-[11px] font-medium">Semua e-wallet</span>
+                      <span className="text-stone-500 text-[11px] font-medium">
+                        Semua e-wallet
+                      </span>
                     </div>
                     <div className="h-px bg-stone-100 flex-1" />
                   </div>
@@ -248,7 +286,7 @@ export default function QRPaymentModal({
                     </div>
                   )}
 
-                  {/* Instruction card */}
+                  {/* Instruction */}
                   <div className="bg-stone-50 rounded-2xl p-3.5 mb-4">
                     <div className="flex items-start gap-2.5">
                       <Smartphone
@@ -258,13 +296,13 @@ export default function QRPaymentModal({
                       />
                       <p className="text-stone-500 text-[12px] leading-relaxed">
                         Buka GoPay, OVO, Dana, atau app bank kamu → pilih{' '}
-                        <strong className="text-stone-700">Scan QR</strong> → arahkan
-                        ke kode di atas
+                        <strong className="text-stone-700">Scan QR</strong> →
+                        arahkan ke kode di atas
                       </p>
                     </div>
                   </div>
 
-                  {/* Demo simulation button */}
+                  {/* Demo Simulation Button */}
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={handleSimulatePay}
@@ -282,9 +320,9 @@ export default function QRPaymentModal({
                   </motion.button>
                 </motion.div>
               ) : (
-                /* ════════════════════════════════════
-                   SUCCESS STATE
-                   ════════════════════════════════════ */
+                /* ══════════════════════════════════════════
+                   SUCCESS VIEW
+                   ══════════════════════════════════════════ */
                 <motion.div
                   key="success-view"
                   initial={{ opacity: 0, scale: 0.97 }}
@@ -293,7 +331,7 @@ export default function QRPaymentModal({
                   transition={{ duration: 0.3 }}
                   className="p-7 text-center"
                 >
-                  {/* Animated checkmark */}
+                  {/* Animated check */}
                   <motion.div
                     initial={{ scale: 0, rotate: -25 }}
                     animate={{ scale: 1, rotate: 0 }}
@@ -339,6 +377,10 @@ export default function QRPaymentModal({
                       </span>
                     </div>
                     <div className="flex justify-between text-[13px]">
+                      <span className="text-stone-400">Pelanggan</span>
+                      <span className="font-bold text-stone-800">{customerName}</span>
+                    </div>
+                    <div className="flex justify-between text-[13px]">
                       <span className="text-stone-400">Nomor Meja</span>
                       <span className="font-bold text-stone-800">
                         Meja {tableNumber}
@@ -352,7 +394,7 @@ export default function QRPaymentModal({
                     </div>
                   </motion.div>
 
-                  {/* ETA notice */}
+                  {/* ETA */}
                   <motion.div
                     initial={{ opacity: 0, y: 14 }}
                     animate={{ opacity: 1, y: 0 }}

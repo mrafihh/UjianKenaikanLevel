@@ -4,7 +4,15 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, Trash2, ShoppingBag, ChevronRight } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
-import { formatCurrency } from '@/lib/utils';
+
+// ─── Fungsi format harga ──────────────────────────────────────
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(value);
+};
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -13,8 +21,9 @@ interface CartDrawerProps {
 }
 
 export default function CartDrawer({ isOpen, onClose, onCheckout }: CartDrawerProps) {
-  const { items, updateQuantity, getTotalPrice } = useCartStore();
-  const totalPrice = getTotalPrice();
+  const items = useCartStore((s) => s.items);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
     <AnimatePresence>
@@ -71,11 +80,11 @@ export default function CartDrawer({ isOpen, onClose, onCheckout }: CartDrawerPr
                   animate={{ opacity: 1, y: 0 }}
                   className="flex flex-col items-center justify-center py-14 text-center"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-stone-800 flex items-center justify-center mb-4">
-                    <ShoppingBag size={26} className="text-stone-600" strokeWidth={1.5} />
+                  <div className="w-16 h-16 bg-stone-800 rounded-full flex items-center justify-center mb-4">
+                    <ShoppingBag size={28} className="text-stone-500" />
                   </div>
-                  <p className="text-stone-400 text-sm font-semibold">Keranjang masih kosong</p>
-                  <p className="text-stone-600 text-xs mt-1">Tambahkan menu yang kamu suka!</p>
+                  <p className="text-stone-400 font-medium">Keranjang masih kosong</p>
+                  <p className="text-stone-600 text-sm mt-1">Yuk, pilih menu favoritmu!</p>
                 </motion.div>
               ) : (
                 <AnimatePresence initial={false}>
@@ -83,20 +92,19 @@ export default function CartDrawer({ isOpen, onClose, onCheckout }: CartDrawerPr
                     <motion.div
                       key={item.id}
                       layout
-                      initial={{ opacity: 0, x: -18 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 24, height: 0, marginBottom: 0, paddingBottom: 0 }}
-                      transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
-                      className="flex items-center gap-3 bg-stone-800 rounded-2xl p-3"
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.15 } }}
+                      className="flex items-center gap-3 bg-stone-800/40 p-2.5 rounded-2xl border border-stone-800"
                     >
-                      {/* Thumbnail */}
-                      <div className="relative w-[60px] h-[60px] rounded-xl overflow-hidden flex-shrink-0">
+                      {/* Image */}
+                      <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-stone-800">
                         <Image
                           src={item.image}
                           alt={item.name}
                           fill
                           className="object-cover"
-                          sizes="60px"
+                          sizes="64px"
                         />
                       </div>
 
@@ -109,49 +117,43 @@ export default function CartDrawer({ isOpen, onClose, onCheckout }: CartDrawerPr
                           {formatCurrency(item.price * item.quantity)}
                         </p>
                         {item.quantity > 1 && (
-                          <p className="text-stone-600 text-[11px] tabular-nums">
+                          <p className="text-stone-500 text-[11px] tabular-nums">
                             {formatCurrency(item.price)} × {item.quantity}
                           </p>
                         )}
                       </div>
 
                       {/* Qty controls */}
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
                         <motion.button
-                          whileTap={{ scale: 0.82 }}
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          aria-label={item.quantity === 1 ? 'Hapus item' : 'Kurangi qty'}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                            item.quantity === 1
-                              ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                              : 'bg-stone-700 text-stone-300 hover:bg-stone-600'
-                          }`}
+                          whileTap={{ scale: 0.8 }}
+                          onClick={() => updateQuantity(item.id, 0)}
+                          className="text-stone-500 hover:text-red-400 p-1 transition-colors"
+                          aria-label="Hapus item"
                         >
-                          {item.quantity === 1 ? (
-                            <Trash2 size={12} strokeWidth={2} />
-                          ) : (
-                            <Minus size={12} strokeWidth={2.5} />
-                          )}
+                          <Trash2 size={13} strokeWidth={2.5} />
                         </motion.button>
 
-                        <motion.span
-                          key={item.quantity}
-                          initial={{ scale: 1.35 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: 'spring', stiffness: 500 }}
-                          className="text-white font-extrabold text-[13px] w-6 text-center select-none"
-                        >
-                          {item.quantity}
-                        </motion.span>
-
-                        <motion.button
-                          whileTap={{ scale: 0.82 }}
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          aria-label="Tambah qty"
-                          className="w-7 h-7 rounded-lg bg-brand/20 text-brand hover:bg-brand/35 flex items-center justify-center transition-colors"
-                        >
-                          <Plus size={12} strokeWidth={2.5} />
-                        </motion.button>
+                        <div className="flex items-center bg-stone-900 rounded-lg overflow-hidden border border-stone-700">
+                          <motion.button
+                            whileTap={{ scale: 0.8 }}
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            className="text-stone-300 px-2 py-1.5 hover:bg-stone-700 transition-colors"
+                          >
+                            <Minus size={11} strokeWidth={2.5} />
+                          </motion.button>
+                          <span className="text-white text-[11px] font-extrabold w-5 text-center select-none tabular-nums">
+                            {item.quantity}
+                          </span>
+                          <motion.button
+                            whileTap={{ scale: 0.8 }}
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            disabled={item.quantity >= item.jumlahStock}
+                            className={`px-2 py-1.5 transition-colors ${item.quantity >= item.jumlahStock ? 'text-stone-600 cursor-not-allowed' : 'text-stone-300 hover:bg-stone-700'}`}
+                          >
+                            <Plus size={11} strokeWidth={2.5} />
+                          </motion.button>
+                        </div>
                       </div>
                     </motion.div>
                   ))}

@@ -1,7 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Category } from '@/lib/menuData';
+
+interface Category {
+  id: string;
+  name: string;
+}
 
 interface CategoryFilterProps {
   categories: Category[];
@@ -39,7 +43,6 @@ export default function CategoryFilter({
                   transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                 />
               )}
-              <span className="relative z-10">{cat.emoji}</span>
               <span className="relative z-10">{cat.name}</span>
             </motion.button>
           );
