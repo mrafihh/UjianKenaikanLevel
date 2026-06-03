@@ -16,12 +16,13 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
-import axios from 'axios'; // 👈 Tambahkan import Axios
+import axios from 'axios';
 
 interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   orderId: string;
+  paymentMethod?: string; // 👈 1. Tambahkan prop paymentMethod di sini
 }
 
 const containerVariants = {
@@ -40,7 +41,8 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 }
 };
 
-export default function SuccessModal({ isOpen, onClose, orderId }: SuccessModalProps) {
+// 👇 2. Tangkap paymentMethod di parameter komponen
+export default function SuccessModal({ isOpen, onClose, orderId, paymentMethod }: SuccessModalProps) {
   const clearCart = useCartStore((s) => s.clearCart);
 
   // ── State untuk download ──────────────────────────────────
@@ -49,10 +51,10 @@ export default function SuccessModal({ isOpen, onClose, orderId }: SuccessModalP
   >('idle');
   const [downloadError, setDownloadError] = useState('');
 
+  
   useEffect(() => {
     if (isOpen) {
       clearCart();
-      // Reset download state setiap kali modal dibuka
       setDownloadStatus('idle');
       setDownloadError('');
     }
@@ -68,27 +70,21 @@ export default function SuccessModal({ isOpen, onClose, orderId }: SuccessModalP
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       
-      // 1. Tembak API dengan menggunakan Axios dan WAJIB ada responseType: 'blob'
       const response = await axios.get(`${apiUrl}/orders/${orderId}/receipt`, {
         responseType: 'blob', 
-        // headers: { Authorization: `Bearer ${localStorage.getItem('admin_token') ?? ''}` },
       });
 
-      // 2. Ubah data biner menjadi objek URL yang bisa dibaca browser
       const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
       const pdfUrl = window.URL.createObjectURL(pdfBlob);
 
-      // 3. Buat elemen <a> fiktif untuk memicu proses download
       const link = document.createElement('a');
       link.href = pdfUrl;
       link.setAttribute('download', `struk-warung-saffron-${orderId}.pdf`);
       document.body.appendChild(link);
       
-      // 4. Klik link secara otomatis, lalu segera hapus dari HTML
       link.click();
       link.remove();
 
-      // 5. Bersihkan memori browser setelah beberapa detik (Penting agar RAM tidak bocor!)
       setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 5000);
 
       setDownloadStatus('idle');
@@ -97,7 +93,6 @@ export default function SuccessModal({ isOpen, onClose, orderId }: SuccessModalP
       
       let msg = 'Terjadi kesalahan saat mengunduh struk.';
       
-      // Error handling khusus Axios agar pesan lebih jelas
       if (axios.isAxiosError(err)) {
         if (err.response?.status === 404) {
           msg = 'Struk tidak ditemukan di server (404).';
@@ -189,9 +184,10 @@ export default function SuccessModal({ isOpen, onClose, orderId }: SuccessModalP
                     <span className="text-[11px] font-bold text-stone-400 uppercase tracking-widest">
                       Metode
                     </span>
-                    <span className="text-sm font-semibold flex items-center gap-1.5">
+                    <span className="text-sm font-semibold flex items-center gap-1.5 text-stone-900">
                       <Receipt size={14} className="text-stone-400" />
-                      Xendit
+                      {/* 👇 3. Tampilkan metode pembayaran di sini secara dinamis */}
+                      {paymentMethod === 'CASH' ? 'Tunai (Kasir)' : paymentMethod === 'ONLINE' ? 'QRIS / Transfer' : 'Online'}
                     </span>
                   </div>
                   <div className="pt-2.5 mt-2.5 border-t border-dashed border-stone-200 flex justify-between items-center">
