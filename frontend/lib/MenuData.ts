@@ -12,12 +12,14 @@ export interface MenuItem {
   price: number;
   category: string;
   imageUrl: string | null;
+  emoji: string | null;
   jumlahStock: number;
 }
 
 export interface Category {
   id: string;
   name: string;
+  emoji: string;
 }
 
 // Mapping emoji per nama kategori (lowercase) yang mungkin datang dari backend
@@ -46,7 +48,7 @@ export const getCategoryEmoji = (cat: string): string =>
  */
 export const buildCategories = (items: MenuItem[]): Category[] => {
   const seen = new Set<string>();
-  const result: Category[] = [{ id: 'all', name: 'Semua'}];
+  const result: Category[] = [{ id: 'all', name: 'Semua', emoji: '🍽️' }];
 
   for (const item of items) {
     if (!seen.has(item.category)) {
@@ -54,6 +56,7 @@ export const buildCategories = (items: MenuItem[]): Category[] => {
       result.push({
         id: item.category,
         name: item.category.charAt(0).toUpperCase() + item.category.slice(1),
+        emoji: getCategoryEmoji(item.category),
       });
     }
   }

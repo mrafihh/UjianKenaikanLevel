@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, WifiOff } from 'lucide-react';
-// 👇 Tambahkan import dari next/navigation untuk mendeteksi redirect url xendit
+// 👇 Import dari next/navigation untuk mendeteksi redirect url xendit
 import { useSearchParams, useRouter } from 'next/navigation'; 
 
 import Header from '@/components/Header';
@@ -13,11 +13,11 @@ import FloatingCartBar from '@/components/FloatingCartBar';
 import CartDrawer from '@/components/CartDrawer';
 import CheckoutModal from '@/components/CheckoutModal';
 import QRPaymentModal from '@/components/QRPaymentModal';
-// 👇 Tambahkan import komponen modal sukses yang kita buat sebelumnya
+// 👇 Import komponen modal sukses yang kita buat sebelumnya
 import SuccessModal from '@/components/successModal'; 
 
-// HANYA MENGAMBIL TYPE SAJA
-import { MenuItem, Category } from '@/lib/MenuData';
+// 👇 MENGAMBIL TYPE & HELPER FUNCTION (buildCategories)
+import { MenuItem, Category, buildCategories } from '@/lib/MenuData';
 
 // ─── Tipe status fetch ────────────────────────────────────────
 type FetchStatus = 'loading' | 'success' | 'error';
@@ -142,7 +142,7 @@ export default function HomePage() {
     fetchMenu();
   }, [fetchMenu]);
 
-  // 👇 Tambahkan Effect ini untuk menangkap kembalinya user dari Xendit
+  // 👇 Effect ini untuk menangkap kembalinya user dari Xendit
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     const orderId = searchParams.get('order_id');
@@ -160,12 +160,9 @@ export default function HomePage() {
 
   // ── Derived state ──────────────────────────────────────────
   const categories: Category[] = useMemo(() => {
-    const uniqueIds = Array.from(new Set(menuItems.map((item) => item.category)));
-    const dynamicCategories = uniqueIds.map((id) => ({
-      id: id,
-      name: id.charAt(0).toUpperCase() + id.slice(1)
-    }));
-    return [{ id: 'all', name: 'Semua' }, ...dynamicCategories];
+    // 👇 Memanggil helper function buildCategories dari MenuData.ts
+    // Ini menyelesaikan error TypeScript kamu dan membuat kategori otomatis!
+    return buildCategories(menuItems);
   }, [menuItems]);
 
   const filteredItems = useMemo(
@@ -224,7 +221,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-cream">
       {/* Sticky Header */}
-      <Header onCartClick={handleOpenCart} />
+      <Header onCartClick={handleOpenCart} restaurantName='Warung Saffron' />
 
       {/* Sticky Category Filter */}
       {fetchStatus === 'success' && categories.length > 1 && (
@@ -348,7 +345,7 @@ export default function HomePage() {
         onSuccess={handlePaymentSuccess}
       />
 
-      {/* 👇 KOMPONEN POP-UP NOTIFIKASI SUKSES (DENGAN LATAR BLUR) */}
+      {/* 👇 KOMPONEN POP-UP NOTIFIKASI SUKSES */}
       <SuccessModal 
         isOpen={isSuccessOpen}
         onClose={() => setIsSuccessOpen(false)}
