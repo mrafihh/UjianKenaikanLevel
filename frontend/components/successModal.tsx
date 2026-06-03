@@ -187,7 +187,7 @@ export default function SuccessModal({ isOpen, onClose, orderId, paymentMethod }
                     <span className="text-sm font-semibold flex items-center gap-1.5 text-stone-900">
                       <Receipt size={14} className="text-stone-400" />
                       {/* 👇 3. Tampilkan metode pembayaran di sini secara dinamis */}
-                      {paymentMethod === 'CASH' ? 'Tunai (Kasir)' : paymentMethod === 'ONLINE' ? 'QRIS / Transfer' : 'Online'}
+                      {paymentMethod === 'ONLINE' ? 'Online' : 'Tunai'}
                     </span>
                   </div>
                   <div className="pt-2.5 mt-2.5 border-t border-dashed border-stone-200 flex justify-between items-center">
