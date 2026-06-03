@@ -19,18 +19,16 @@ import { formatCurrency } from '@/lib/Utils';
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /**
-   * Tetap dipertahankan sebagai fallback/untuk opsi bayar Tunai (CASH)
-   */
   onPayment: (
     orderId: string,
     customerName: string,
     tableNumber: string,
     grandTotal: number
   ) => void;
+  // 👇 TAMBAHKAN PROP BARU UNTUK DEMO CASH LANGSUNG SUKSES
+  onCashSuccess: (orderId: string) => void; 
 }
 
-// 1. DISESUAIKAN: Mengubah 'QRIS' menjadi 'ONLINE' sesuai response backend Anda
 type PaymentMethod = 'ONLINE' | 'CASH';
 
 interface FormErrors {
@@ -42,11 +40,12 @@ export default function CheckoutModal({
   isOpen,
   onClose,
   onPayment,
+  onCashSuccess, // 👇 Panggil di sini
 }: CheckoutModalProps) {
   const [customerName, setCustomerName] = useState('');
   const [tableNumber, setTableNumber] = useState('');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ONLINE'); // Default ke ONLINE
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ONLINE'); 
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -62,7 +61,6 @@ export default function CheckoutModal({
   const taxAmount = Math.round(subtotal * 0.11);
   const grandTotal = subtotal + taxAmount;
 
-  // ── Validation ────────────────────────────────────────────
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -81,7 +79,6 @@ export default function CheckoutModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  // ── POST ke backend ───────────────────────────────────────
   const handlePay = async () => {
     if (!validate()) return;
 
@@ -92,7 +89,7 @@ export default function CheckoutModal({
       const payload = {
         customerName: customerName.trim(),
         tableNumber: tableNumber.trim(),
-        paymentMethod, // Mengirim 'ONLINE' atau 'CASH'
+        paymentMethod, 
         notes: notes.trim() || undefined,
         items: items.map((item) => ({
           menuItemId: item.menuItemId,
@@ -120,21 +117,17 @@ export default function CheckoutModal({
 
       const data = await res.json();
 
-      // Mengambil orderId & paymentUrl dari response tunggal maupun nested data object
       const orderId = String(data?.id ?? data?.data?.id ?? 'N/A');
       const paymentUrl = data?.paymentUrl ?? data?.data?.paymentUrl;
 
-      // Simpan data meja & nama ke local store
       saveTable(tableNumber.trim());
       saveName(customerName.trim());
 
-      // 2. LOGIKA UTAMA INTEGRASI XENDIT INVOICE
       if (paymentMethod === 'ONLINE' && paymentUrl) {
-        // Alihkan halaman ke gerbang pembayaran aman Xendit Invoice
         window.location.href = paymentUrl;
       } else {
-        // Jika memilih bayar di kasir (CASH), gunakan alur modal lokal bawaan Anda
-        onPayment(orderId, customerName.trim(), tableNumber.trim(), grandTotal);
+        // 👇 JIKA CASH: Langsung panggil fungsi sukses tanpa lewat modal QRIS
+        onCashSuccess(orderId);
       }
     } catch (err) {
       setApiError(
@@ -172,7 +165,6 @@ export default function CheckoutModal({
             transition={{ type: 'spring', stiffness: 360, damping: 36 }}
             className="bg-white w-full max-w-lg rounded-t-[28px] sm:rounded-[28px] max-h-[92vh] flex flex-col overflow-hidden"
           >
-            {/* Drag handle (mobile) */}
             <div className="w-10 h-[3px] bg-stone-200 rounded-full mx-auto mt-3 flex-shrink-0 sm:hidden" />
 
             {/* Header */}
@@ -442,7 +434,6 @@ export default function CheckoutModal({
 
             {/* Footer CTA */}
             <div className="px-5 pt-3 pb-4 border-t border-stone-100 bg-white flex-shrink-0">
-              {/* API Error Banner */}
               <AnimatePresence>
                 {apiError && (
                   <motion.div
@@ -474,7 +465,7 @@ export default function CheckoutModal({
                 {isProcessing ? (
                   <>
                     <Loader2 size={18} className="animate-spin" strokeWidth={2.5} />
-                    <span>Menghubungkan ke Xendit...</span>
+                    <span>Memproses Pesanan...</span>
                   </>
                 ) : paymentMethod === 'ONLINE' ? (
                   <>
@@ -483,7 +474,7 @@ export default function CheckoutModal({
                   </>
                 ) : (
                   <>
-                    <span>Pesan & Bayar di Kasir</span>
+                    <span>Selesai & Buat Pesanan</span>
                     <ChevronRight size={17} strokeWidth={2.5} />
                   </>
                 )}

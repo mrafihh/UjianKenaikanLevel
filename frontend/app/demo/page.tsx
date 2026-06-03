@@ -331,6 +331,12 @@ function HomeContent() {
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
         onPayment={handlePayment}
+        // 👇 IMPLEMENTASI DI SINI: Memicu SuccessModal saat memilih bayar di kasir
+        onCashSuccess={(orderId) => {
+          setIsCheckoutOpen(false);      // Tutup modal checkout
+          setSuccessOrderId(orderId);    // Set ID pesanan untuk ditampilkan di pop-up
+          setIsSuccessOpen(true);        // Langsung tampilkan SuccessModal!
+        }}
       />
 
       {/* QR Payment Modal */}
