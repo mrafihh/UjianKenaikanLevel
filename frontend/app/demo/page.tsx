@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, WifiOff } from 'lucide-react';
 // 👇 Import dari next/navigation untuk mendeteksi redirect url xendit
@@ -87,8 +87,8 @@ function ErrorState({
   );
 }
 
-// ─── Main Page Component ──────────────────────────────────────
-export default function HomePage() {
+// ─── Konten Utama Komponen ─────────────────────────────────────
+function HomeContent() {
   // ── Hooks Navigation NextJS ────────────────────────────────
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -161,7 +161,6 @@ export default function HomePage() {
   // ── Derived state ──────────────────────────────────────────
   const categories: Category[] = useMemo(() => {
     // 👇 Memanggil helper function buildCategories dari MenuData.ts
-    // Ini menyelesaikan error TypeScript kamu dan membuat kategori otomatis!
     return buildCategories(menuItems);
   }, [menuItems]);
 
@@ -352,5 +351,18 @@ export default function HomePage() {
         orderId={successOrderId}
       />
     </main>
+  );
+}
+
+// 👇 INI ADALAH IMPLEMENTASI HALAMAN UTAMA (Membungkus HomeContent dengan Suspense)
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-cream flex items-center justify-center text-stone-600 font-bold">
+        Memuat halaman...
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
