@@ -313,8 +313,8 @@ export class OrdersService {
       // ==========================================
       // HEADER
       // ==========================================
-      printLine(`Warung Saffron`), true, 20, {align: 'center'});
-
+      printLine(center('Warung Saffron'), true, 20, {align: center);
+      
       doc.moveDown(0.5); // Spasi kecil sebelum tabel item
 
       // ORDER INFO
