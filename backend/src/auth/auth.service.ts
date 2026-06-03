@@ -30,9 +30,11 @@ export class AuthService {
     // Simpan ke database
     const user = await this.prisma.user.create({
       data: {
+        namaRestoran: dto.namaRestoran,
         username: dto.username,
+        phone: dto.phone,
         password: hashedPassword,
-        role: dto.role,
+        role: 'ADMIN',
       },
     });
 

@@ -1,6 +1,6 @@
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -9,56 +9,65 @@ generator client {
 
 enum Role {
   ADMIN
-  KASIR
+}
+
+enum MenuCategory {
+  FOOD
+  DRINK
+  SNACK
 }
 
 enum OrderStatus {
-  PENDING
-  PAID
-  PREPARING
-  READY
-  COMPLETED
-  CANCELLED
+  PENDING  
+  PAID 
+  PREPARING  
+  READY  
+  COMPLETED 
+  CANCELLED  
 }
 
 enum PaymentMethod {
   CASH
-  QRIS
+  ONLINE
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  password  String   
-  role      Role
+  id           Int      @id @default(autoincrement())
+  namaRestoran String  
+  username     String   @unique
+  phone        String
+  password     String   
+  role         Role     @default(ADMIN) 
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model MenuItem {
-  id          Int         @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   name        String
   description String?
   price       Int        
-  category    String
+  category    MenuCategory
   imageUrl    String?
   emoji       String?
-  jumlahStock Int         @default(0)
+  jumlahStock Int          @default(0)
   
   orderItems  OrderItem[]
   
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model Order {
   id            Int           @id @default(autoincrement())
   customerName  String        
-  tableNumber   String
+  tableNumber   String   
   status        OrderStatus   @default(PENDING)
   paymentMethod PaymentMethod
-  notes         String?
+  notes         String?      
+  paymentUrl    String?
+  invoiceId     String?       @unique
   
   subtotal      Int
   tax           Int
@@ -75,7 +84,8 @@ model OrderItem {
   orderId    Int
   menuItemId Int
   quantity   Int
-  unitPrice  Int     
+  unitPrice  Int   
+  notes      String? 
   
   order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
