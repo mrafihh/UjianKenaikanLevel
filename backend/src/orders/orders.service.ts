@@ -49,13 +49,18 @@ export class OrdersService {
     const tax = Math.round(subtotal * TAX_RATE);
     const total = subtotal + tax;
 
-    // 1. JALANKAN TRANSAKSI PRISMA (Simpan ke DB dulu)
+// 1. JALANKAN TRANSAKSI PRISMA (Simpan ke DB dulu)
     const createdOrder = await this.prisma.$transaction(async (tx) => {
+      
+      // 👇 TAMBAHAN BARU: Tentukan status berdasarkan metode bayar
+      const initialStatus = dto.paymentMethod === 'CASH' ? 'PAID' : 'PENDING';
+
       const newOrder = await tx.order.create({
         data: {
           customerName: dto.customerName,
           tableNumber: dto.tableNumber,
           paymentMethod: dto.paymentMethod,
+          status: initialStatus, // 👈 Paksa masukkan status di sini
           notes: dto.notes,
           subtotal,
           tax,
