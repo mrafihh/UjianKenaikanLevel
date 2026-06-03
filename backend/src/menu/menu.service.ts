@@ -110,24 +110,33 @@ export class MenuService {
   async remove(id: number) {
     // 1. Cek dulu apakah menunya memang ada, sekalian hitung ada berapa kali menu ini pernah dipesan
     const menu = await this.prisma.menuItem.findUnique({ 
-      where: { id },
-      include: {
-        _count: {
-          select: { orderItems: true } // Menghitung total orderItems terkait secara efisien
-        }
-      }
+      where: { id }
     });
 
     if (!menu) throw new NotFoundException(`Menu dengan ID #${id} tidak ditemukan`);
 
-    // 2. Jika count > 0, gagalkan penghapusan secara sengaja sebelum database menghapus paksa riwayatnya
-    if (menu._count.orderItems > 0) {
+    const activeOrdersCount = await this.prisma.orderItem.count({
+      where: {
+        menuItemId: id,
+        order: {
+          status: {
+            notIn: ['COMPLETED', 'CANCELLED'], // Hanya nge-block jika statusnya Pending/Paid/Preparing/Ready
+          },
+        },
+      },
+    });
+
+    // 3. Jika ada pesanan yang masih berjalan, blokir penghapusan
+    if (activeOrdersCount > 0) {
       throw new BadRequestException(
-        'Menu tidak bisa dihapus karena sudah memiliki riwayat transaksi. Silakan ubah stok menjadi 0 saja agar tidak tampil di aplikasi pelanggan.',
+        'Menu tidak bisa dihapus karena masih ada pesanan pelanggan yang sedang berjalan (aktif). Selesaikan atau batalkan pesanan tersebut terlebih dahulu, atau ubah stok menu menjadi 0.'
       );
     }
 
-    // 3. Jika benar-benar bersih belum pernah dipesan, baru boleh dihapus aman
-    return await this.prisma.menuItem.delete({ where: { id } });
+    // 4. Jika aman (tidak ada pesanan aktif), lanjutkan penghapusan secara permanen
+    // Berdasarkan schema database kamu, ini akan memicu efek "Cascade"
+    return this.prisma.menuItem.delete({
+      where: { id },
+    });
   }
 }
