@@ -313,7 +313,7 @@ export class OrdersService {
       // ==========================================
       // HEADER
       // ==========================================
-      printLine((restoName.toUpperCase()), true, 20, {align: 'center'});
+      printLine("Warung Saffron"), true, 20, {align: 'center'});
 
       doc.moveDown(0.5); // Spasi kecil sebelum tabel item
 
@@ -387,7 +387,7 @@ export class OrdersService {
       doc.moveDown(2);
 
       printLine(center('THANK YOU FOR VISITING!'), true);
-      printLine(center('OrderEase'), true);
+      printLine(center('|||||| OrderEase  ||||||'), true);
 
       doc.end();
     });
