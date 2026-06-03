@@ -22,7 +22,7 @@ interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   orderId: string;
-  paymentMethod?: string; // 👈 1. Tambahkan prop paymentMethod di sini
+  paymentMethod: string;
 }
 
 const containerVariants = {
@@ -42,8 +42,9 @@ const itemVariants = {
 };
 
 // 👇 2. Tangkap paymentMethod di parameter komponen
-export default function SuccessModal({ isOpen, onClose, orderId, paymentMethod }: SuccessModalProps) {
+export default function SuccessModal({ isOpen, onClose, orderId, paymentMethod}: SuccessModalProps) {
   const clearCart = useCartStore((s) => s.clearCart);
+
 
   // ── State untuk download ──────────────────────────────────
   const [downloadStatus, setDownloadStatus] = useState<
@@ -187,7 +188,7 @@ export default function SuccessModal({ isOpen, onClose, orderId, paymentMethod }
                     <span className="text-sm font-semibold flex items-center gap-1.5 text-stone-900">
                       <Receipt size={14} className="text-stone-400" />
                       {/* 👇 3. Tampilkan metode pembayaran di sini secara dinamis */}
-                      {paymentMethod === 'ONLINE' ? 'Online' : 'Tunai'}
+                      {paymentMethod === 'ONLINE' ? 'XENDIT (ONLINE)' : 'TUNAI (CASH)'}
                     </span>
                   </div>
                   <div className="pt-2.5 mt-2.5 border-t border-dashed border-stone-200 flex justify-between items-center">

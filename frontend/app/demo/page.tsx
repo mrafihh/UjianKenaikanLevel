@@ -109,6 +109,7 @@ function HomeContent() {
   // 👇 State Baru untuk Mengontrol Pop-up SuccessModal
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState('');
+  const [successPaymentMethod, setSuccessPaymentMethod] = useState('CASH');
 
   // ── Data diteruskan ke QR modal ────────────────────────────
   const [currentOrderId, setCurrentOrderId] = useState('');
@@ -149,6 +150,7 @@ function HomeContent() {
 
     if (paymentStatus === 'success') {
       setSuccessOrderId(orderId || 'ORD-UNKNOWN');
+      setSuccessPaymentMethod('ONLINE'); // Tandai bahwa ini pembayaran online
       setIsSuccessOpen(true);
       
       // Bersihkan URL secara bersih (agar saat di-refresh pop-up tidak muncul lagi)
@@ -202,6 +204,7 @@ function HomeContent() {
       setCurrentTable(tableNumber);
       setCurrentGrandTotal(grandTotal);
       setIsCheckoutOpen(false);
+      setSuccessPaymentMethod('ONLINE');
       setTimeout(() => setIsPaymentOpen(true), 120);
     },
     []
@@ -336,6 +339,7 @@ function HomeContent() {
           setIsCheckoutOpen(false);      // Tutup modal checkout
           setSuccessOrderId(orderId);    // Set ID pesanan untuk ditampilkan di pop-up
           setIsSuccessOpen(true);        // Langsung tampilkan SuccessModal!
+          setSuccessPaymentMethod('CASH');   // Tandai bahwa ini pembayaran tunai
         }}
       />
 
@@ -355,6 +359,7 @@ function HomeContent() {
         isOpen={isSuccessOpen}
         onClose={() => setIsSuccessOpen(false)}
         orderId={successOrderId}
+        paymentMethod={successPaymentMethod}
       />
     </main>
   );
